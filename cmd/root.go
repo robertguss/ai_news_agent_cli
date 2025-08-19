@@ -7,13 +7,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "ai-news-agent-cli",
-	Short: "AI-powered news aggregation CLI",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ai-news-agent-cli -- help with `-h`")
-	},
+func NewRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ai-news-agent-cli",
+		Short: "AI-powered news aggregation CLI",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Fprintln(cmd.OutOrStdout(), "AI News Agent")
+		},
+	}
+	return cmd
 }
+
+var rootCmd = NewRootCmd()
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
