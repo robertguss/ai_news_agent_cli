@@ -1,3 +1,4 @@
+dsn: "./ai-news.db"
 sources:
   - name: "Ars Technica AI"
     url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
