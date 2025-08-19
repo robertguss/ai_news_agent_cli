@@ -1,0 +1,13 @@
+sources:
+  - name: "Ars Technica AI"
+    url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
+    type: "rss"
+    priority: 2
+  - name: "Google AI Blog"
+    url: "https://ai.googleblog.com/feeds/posts/default"
+    type: "rss"
+    priority: 1
+  - name: "OpenAI Blog"
+    url: "https://openai.com/blog/rss.xml"
+    type: "rss"
+    priority: 1
