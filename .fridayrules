@@ -1,0 +1,25 @@
+# .fridayrules
+# Keep this file ≤ 50 lines. Update whenever the architecture, testing or linting story changes.
+
+Architecture
+------------
+Language: Go 1.22+
+CLI      : Cobra (cmd/)
+Modules  : internal/{database,fetcher,processor,scraper,config}
+Database : SQLite; sqlc generates type-safe code in internal/database
+
+Testing
+-------
+Run all tests          : go test ./...
+Verbose                : go test -v ./...
+Package-specific       : go test ./<pkg>/...
+Coverage report        : go test -cover ./...
+Mocks (when changed)   : mockery --all --output internal/mocks
+
+Linting / Quality
+-----------------
+Format code            : go fmt ./...
+Static analysis        : go vet ./...
+Optional (if enabled)  : golangci-lint run
+
+# End of .fridayrules
