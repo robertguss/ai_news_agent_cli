@@ -5,7 +5,7 @@ sources:
     type: "rss"
     priority: 2
   - name: "Google AI Blog"
-    url: "https://ai.googleblog.com/feeds/posts/default"
+    url: "https://feeds.feedburner.com/blogspot/gJZg"
     type: "rss"
     priority: 1
   - name: "OpenAI Blog"
