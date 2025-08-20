@@ -1,7 +1,7 @@
 package cmd
 
 import (
-        "bytes"
+        "context"
         "database/sql"
         "os"
         "path/filepath"
@@ -10,7 +10,7 @@ import (
 
         "github.com/robertguss/ai-news-agent-cli/internal/database"
         "github.com/robertguss/ai-news-agent-cli/internal/state"
-        "github.com/spf13/cobra"
+        "github.com/robertguss/ai-news-agent-cli/internal/tui"
         "github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +34,7 @@ func TestViewCommand_SavesStateAfterDisplay(t *testing.T) {
         
         q := database.New(db)
         
-        article1, err := q.CreateArticle(database.CreateArticleParams{
+        article1, err := q.CreateArticle(context.Background(), database.CreateArticleParams{
                 Title:         sql.NullString{String: "Test Article 1", Valid: true},
                 Url:           sql.NullString{String: "https://example.com/1", Valid: true},
                 SourceName:    sql.NullString{String: "Test Source", Valid: true},
@@ -44,7 +44,7 @@ func TestViewCommand_SavesStateAfterDisplay(t *testing.T) {
         })
         assert.NoError(t, err)
         
-        article2, err := q.CreateArticle(database.CreateArticleParams{
+        article2, err := q.CreateArticle(context.Background(), database.CreateArticleParams{
                 Title:         sql.NullString{String: "Test Article 2", Valid: true},
                 Url:           sql.NullString{String: "https://example.com/2", Valid: true},
                 SourceName:    sql.NullString{String: "Test Source", Valid: true},
