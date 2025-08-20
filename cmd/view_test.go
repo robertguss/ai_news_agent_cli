@@ -111,7 +111,8 @@ func TestViewCmd_SingleArticle(t *testing.T) {
         output, err := executeViewCommand("view")
 
         assert.NoError(t, err)
-        assert.Equal(t, "Test Title - Test Source\n", output)
+        assert.Contains(t, output, "[1] Test Title")
+        assert.Contains(t, output, "Source: Test Source (Tier 3)")
 }
 
 func TestViewCmd_MultipleArticles(t *testing.T) {
@@ -131,8 +132,12 @@ func TestViewCmd_MultipleArticles(t *testing.T) {
         output, err := executeViewCommand("view")
 
         assert.NoError(t, err)
-        expected := "First Article - BBC\nSecond Article - Reuters\nThird Article - CNN\n"
-        assert.Equal(t, expected, output)
+        assert.Contains(t, output, "[1] First Article")
+        assert.Contains(t, output, "[2] Second Article")
+        assert.Contains(t, output, "[3] Third Article")
+        assert.Contains(t, output, "Source: BBC (Tier 3)")
+        assert.Contains(t, output, "Source: Reuters (Tier 3)")
+        assert.Contains(t, output, "Source: CNN (Tier 3)")
 }
 
 func TestViewCmd_NullValues(t *testing.T) {
@@ -152,8 +157,11 @@ func TestViewCmd_NullValues(t *testing.T) {
         output, err := executeViewCommand("view")
 
         assert.NoError(t, err)
-        expected := "(no title) - Test Source\nTest Title - (no source)\n(no title) - (no source)\n"
-        assert.Equal(t, expected, output)
+        assert.Contains(t, output, "[1] (no title)")
+        assert.Contains(t, output, "[2] Test Title")
+        assert.Contains(t, output, "[3] (no title)")
+        assert.Contains(t, output, "Source: Test Source (Tier 3)")
+        assert.Contains(t, output, "Source: (no source) (Tier 3)")
 }
 
 func TestViewCmd_DatabaseFlag(t *testing.T) {
@@ -172,7 +180,8 @@ func TestViewCmd_DatabaseFlag(t *testing.T) {
         output, err := executeViewCommand("view", "--db", dbPath)
 
         assert.NoError(t, err)
-        assert.Equal(t, "Flag Test - Test Source\n", output)
+        assert.Contains(t, output, "[1] Flag Test")
+        assert.Contains(t, output, "Source: Test Source (Tier 3)")
 }
 
 func TestViewCmd_DatabaseConnectionError(t *testing.T) {
@@ -214,7 +223,8 @@ func TestViewCmd_Integration(t *testing.T) {
         output, err := executeViewCommand("view", "--db", dbPath)
 
         assert.NoError(t, err)
-        assert.Equal(t, "Integration Test - Integration Source\n", output)
+        assert.Contains(t, output, "[1] Integration Test")
+        assert.Contains(t, output, "Source: Integration Source (Tier 3)")
 }
 
 func TestViewCmd_DefaultShowsOnlyUnreadAndMarksRead(t *testing.T) {
