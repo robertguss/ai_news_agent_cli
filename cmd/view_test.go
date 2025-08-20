@@ -350,3 +350,44 @@ func TestViewCmd_StoryGroupingShowsDuplicates(t *testing.T) {
         assert.NotContains(t, output, "Duplicate Article 2")
         assert.Contains(t, output, "Different Story")
 }
+
+func TestViewCmd_UsesTUIWhenTTYDetected(t *testing.T) {
+        db, dbPath, cleanup := setupTestDB(t)
+        defer cleanup()
+
+        insertTestArticle(db, "Test Article", "Test Source")
+
+        originalShouldUseTUI := shouldUseTUIFunc
+        shouldUseTUIFunc = func() bool { return true }
+        defer func() { shouldUseTUIFunc = originalShouldUseTUI }()
+
+        originalRunTUIView := runTUIViewFunc
+        tuiCalled := false
+        runTUIViewFunc = func(dbPath string, opts ViewOptions) error {
+                tuiCalled = true
+                return nil
+        }
+        defer func() { runTUIViewFunc = originalRunTUIView }()
+
+        _, err := executeViewCommand("view", "--db", dbPath)
+
+        assert.NoError(t, err)
+        assert.True(t, tuiCalled, "TUI view should be called when TTY is detected")
+}
+
+func TestViewCmd_UsesLegacyWhenNoTTY(t *testing.T) {
+        db, dbPath, cleanup := setupTestDB(t)
+        defer cleanup()
+
+        insertTestArticle(db, "Test Article", "Test Source")
+
+        originalShouldUseTUI := shouldUseTUIFunc
+        shouldUseTUIFunc = func() bool { return false }
+        defer func() { shouldUseTUIFunc = originalShouldUseTUI }()
+
+        output, err := executeViewCommand("view", "--db", dbPath)
+
+        assert.NoError(t, err)
+        assert.Contains(t, output, "[1] Test Article")
+        assert.Contains(t, output, "Source: Test Source (Tier 3)")
+}
