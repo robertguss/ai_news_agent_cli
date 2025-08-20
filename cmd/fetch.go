@@ -133,6 +133,13 @@ func runInteractiveFetch(ctx context.Context, cfg *config.Config, queries *datab
                 go func() {
                         for msg := range detailedProgress {
                                 progress <- tui.ArticleProgressMsg(msg)
+                                // Send article added message when an article is successfully stored
+                                if msg.Phase == tui.PhaseAI && msg.ArticleTitle == "Article stored" {
+                                        program.Send(tui.ArticleAddedMsg{
+                                                Source: msg.Source,
+                                                Count:  1,
+                                        })
+                                }
                         }
                 }()
 

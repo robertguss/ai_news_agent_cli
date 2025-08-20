@@ -358,11 +358,13 @@ func (m Model) renderPreview(width int) string {
         b.WriteString(fmt.Sprintf("Source: %s • Status: %s\n\n", article.Source, status))
 
         // Summary
+        b.WriteString("Summary:\n")
         if article.Summary != "" {
-                b.WriteString("Summary:\n")
                 // Word wrap the summary
                 wrapped := wordWrap(article.Summary, width-4)
                 b.WriteString(wrapped + "\n\n")
+        } else {
+                b.WriteString("No summary available\n\n")
         }
 
         // URL
