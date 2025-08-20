@@ -1,11 +1,17 @@
 package processor
 
-import "encoding/json"
+import (
+        "context"
+        "encoding/json"
+
+        "github.com/robertguss/ai-news-agent-cli/internal/config"
+)
 
 //go:generate mockery --name=AIProcessor
 
 type AIProcessor interface {
         AnalyzeContent(content string) (*AnalysisResult, error)
+        AnalyzeContentWithRetry(ctx context.Context, content string, cfg *config.Config) (*AnalysisResult, error)
 }
 
 type Entities struct {
