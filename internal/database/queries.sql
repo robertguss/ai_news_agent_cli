@@ -10,9 +10,10 @@ INSERT INTO articles (
     topics,
     status,
     analysis_status,
-    story_group_id
+    story_group_id,
+    content
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 ) RETURNING *;
 
 -- name: GetArticleByUrl :one

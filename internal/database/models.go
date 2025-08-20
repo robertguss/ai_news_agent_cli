@@ -21,4 +21,5 @@ type Article struct {
 	Status         sql.NullString
 	AnalysisStatus sql.NullString
 	StoryGroupID   sql.NullString
+	Content        sql.NullString
 }
