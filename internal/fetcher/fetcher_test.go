@@ -49,7 +49,7 @@ func TestFetch_Success(t *testing.T) {
 
 	ctx := context.Background()
 	articles, err := Fetch(ctx, source)
-	
+
 	require.NoError(t, err)
 	require.Len(t, articles, 2)
 
@@ -74,7 +74,7 @@ func TestFetch_NetworkError(t *testing.T) {
 	defer cancel()
 
 	articles, err := Fetch(ctx, source)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, articles)
 }
@@ -96,7 +96,7 @@ func TestFetch_InvalidRSS(t *testing.T) {
 
 	ctx := context.Background()
 	articles, err := Fetch(ctx, source)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, articles)
 }
@@ -116,7 +116,7 @@ func TestFetch_HTTPError(t *testing.T) {
 
 	ctx := context.Background()
 	articles, err := Fetch(ctx, source)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, articles)
 }
@@ -139,7 +139,7 @@ func TestFetch_ContextTimeout(t *testing.T) {
 	defer cancel()
 
 	articles, err := Fetch(ctx, source)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, articles)
 }

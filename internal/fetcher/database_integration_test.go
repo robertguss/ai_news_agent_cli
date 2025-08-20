@@ -31,7 +31,7 @@ func TestStoreArticles_Success(t *testing.T) {
 			PublishedDate: time.Now(),
 		},
 		{
-			Title:         "Test Article 2", 
+			Title:         "Test Article 2",
 			Link:          "https://example.com/article2",
 			PublishedDate: time.Now().Add(-1 * time.Hour),
 		},
@@ -85,7 +85,7 @@ func TestStoreArticles_DuplicateHandling(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	
+
 	stored1, err := StoreArticles(ctx, queries, articles, source)
 	require.NoError(t, err)
 	assert.Equal(t, 1, stored1)
@@ -186,7 +186,7 @@ func createTestSchema(db *sql.DB) error {
 		status TEXT DEFAULT 'unread',
 		story_group_id TEXT
 	);`
-	
+
 	_, err := db.Exec(schema)
 	return err
 }

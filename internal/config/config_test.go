@@ -12,7 +12,7 @@ import (
 func TestLoad_Success(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yaml")
-	
+
 	configContent := `sources:
   - name: "Test Source"
     url: "https://example.com/feed.xml"
@@ -48,7 +48,7 @@ func TestLoad_Success(t *testing.T) {
 
 func TestLoad_MissingFile(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
@@ -64,7 +64,7 @@ func TestLoad_MissingFile(t *testing.T) {
 func TestLoad_InvalidYAML(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yaml")
-	
+
 	invalidYAML := `sources:
   - name: "Test Source"
     url: "https://example.com/feed.xml"
