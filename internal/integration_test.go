@@ -1,21 +1,21 @@
 package internal
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"testing"
+        "context"
+        "net/http"
+        "net/http/httptest"
+        "os"
+        "path/filepath"
+        "testing"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
-	"github.com/robertguss/ai-news-agent-cli/internal/fetcher"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+        "github.com/robertguss/ai-news-agent-cli/internal/config"
+        "github.com/robertguss/ai-news-agent-cli/internal/fetcher"
+        "github.com/stretchr/testify/assert"
+        "github.com/stretchr/testify/require"
 )
 
 func TestConfigAndFetcherIntegration(t *testing.T) {
-	rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
         <title>OpenAI News</title>
@@ -36,52 +36,52 @@ func TestConfigAndFetcherIntegration(t *testing.T) {
     </channel>
 </rss>`
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/rss+xml")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rssContent))
-	}))
-	defer server.Close()
+        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/rss+xml")
+                w.WriteHeader(http.StatusOK)
+                _, _ = w.Write([]byte(rssContent))
+        }))
+        defer server.Close()
 
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "config.yaml")
+        tempDir := t.TempDir()
+        configPath := filepath.Join(tempDir, "config.yaml")
 
-	configContent := `sources:
+        configContent := `sources:
   - name: "Test OpenAI Blog"
     url: "` + server.URL + `"
     type: "rss"
     priority: 1`
 
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
-	require.NoError(t, err)
+        err := os.WriteFile(configPath, []byte(configContent), 0644)
+        require.NoError(t, err)
 
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer os.Chdir(originalDir)
+        originalDir, err := os.Getwd()
+        require.NoError(t, err)
+        defer func() { _ = os.Chdir(originalDir) }()
 
-	err = os.Chdir(tempDir)
-	require.NoError(t, err)
+        err = os.Chdir(tempDir)
+        require.NoError(t, err)
 
-	cfg, err := config.Load()
-	require.NoError(t, err)
-	require.Len(t, cfg.Sources, 1)
+        cfg, err := config.Load()
+        require.NoError(t, err)
+        require.Len(t, cfg.Sources, 1)
 
-	source := cfg.Sources[0]
-	assert.Equal(t, "Test OpenAI Blog", source.Name)
-	assert.Equal(t, server.URL, source.URL)
-	assert.Equal(t, "rss", source.Type)
-	assert.Equal(t, 1, source.Priority)
+        source := cfg.Sources[0]
+        assert.Equal(t, "Test OpenAI Blog", source.Name)
+        assert.Equal(t, server.URL, source.URL)
+        assert.Equal(t, "rss", source.Type)
+        assert.Equal(t, 1, source.Priority)
 
-	ctx := context.Background()
-	articles, err := fetcher.Fetch(ctx, source, cfg)
-	require.NoError(t, err)
-	require.Len(t, articles, 2)
+        ctx := context.Background()
+        articles, err := fetcher.Fetch(ctx, source, cfg, fetcher.FetchOptions{})
+        require.NoError(t, err)
+        require.Len(t, articles, 2)
 
-	assert.Equal(t, "Introducing GPT-5 for developers", articles[0].Title)
-	assert.Equal(t, "https://openai.com/index/introducing-gpt-5-for-developers", articles[0].Link)
-	assert.False(t, articles[0].PublishedDate.IsZero())
+        assert.Equal(t, "Introducing GPT-5 for developers", articles[0].Title)
+        assert.Equal(t, "https://openai.com/index/introducing-gpt-5-for-developers", articles[0].Link)
+        assert.False(t, articles[0].PublishedDate.IsZero())
 
-	assert.Equal(t, "GPT-5 and the new era of work", articles[1].Title)
-	assert.Equal(t, "https://openai.com/index/gpt-5-new-era-of-work", articles[1].Link)
-	assert.False(t, articles[1].PublishedDate.IsZero())
+        assert.Equal(t, "GPT-5 and the new era of work", articles[1].Title)
+        assert.Equal(t, "https://openai.com/index/gpt-5-new-era-of-work", articles[1].Link)
+        assert.False(t, articles[1].PublishedDate.IsZero())
 }
