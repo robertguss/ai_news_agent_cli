@@ -19,3 +19,30 @@ SELECT * FROM articles WHERE url = ? LIMIT 1;
 
 -- name: ListArticles :many
 SELECT * FROM articles;
+
+-- name: ListUnreadArticles :many
+SELECT * FROM articles WHERE status = 'unread' ORDER BY published_date DESC;
+
+-- name: ListAllArticles :many
+SELECT * FROM articles ORDER BY published_date DESC;
+
+-- name: ListArticlesBySource :many
+SELECT * FROM articles WHERE status = 'unread' AND source_name = ? ORDER BY published_date DESC;
+
+-- name: ListArticlesByTopic :many
+SELECT * FROM articles WHERE status = 'unread' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+
+-- name: ListArticlesBySourceAndTopic :many
+SELECT * FROM articles WHERE status = 'unread' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+
+-- name: ListAllArticlesBySource :many
+SELECT * FROM articles WHERE source_name = ? ORDER BY published_date DESC;
+
+-- name: ListAllArticlesByTopic :many
+SELECT * FROM articles WHERE JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+
+-- name: ListAllArticlesBySourceAndTopic :many
+SELECT * FROM articles WHERE source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+
+-- name: MarkArticlesAsRead :exec
+UPDATE articles SET status = 'read' WHERE id IN (sqlc.slice('ids'));

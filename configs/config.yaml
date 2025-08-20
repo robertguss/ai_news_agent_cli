@@ -4,8 +4,8 @@ sources:
     url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
     type: "rss"
     priority: 2
-  - name: "Google AI Blog"
-    url: "https://feeds.feedburner.com/blogspot/gJZg"
+  - name: "Hugging Face Blog"
+    url: "https://huggingface.co/blog/feed.xml"
     type: "rss"
     priority: 1
   - name: "OpenAI Blog"
