@@ -5,10 +5,13 @@ import (
         "database/sql"
         "encoding/json"
         "fmt"
+        "strconv"
         "strings"
+        "time"
 
         tea "github.com/charmbracelet/bubbletea"
         "github.com/robertguss/ai-news-agent-cli/internal/database"
+        "github.com/robertguss/ai-news-agent-cli/internal/state"
         "github.com/robertguss/ai-news-agent-cli/internal/tui"
         "github.com/robertguss/ai-news-agent-cli/internal/tui/viewui"
         "github.com/spf13/cobra"
@@ -107,7 +110,31 @@ func runTUIView(dbPath string, opts ViewOptions) error {
         p := tea.NewProgram(model, tea.WithAltScreen())
         
         _, err = p.Run()
-        return err
+        if err != nil {
+                return err
+        }
+        
+        if len(articles) > 0 {
+                stateMap := make(map[string]state.ArticleRef)
+                for i, article := range articles {
+                        idx := strconv.Itoa(i + 1)
+                        stateMap[idx] = state.ArticleRef{
+                                ID:           article.ID,
+                                URL:          formatNullString(article.Url, ""),
+                                Title:        formatNullString(article.Title, ""),
+                                StoryGroupID: formatNullString(article.StoryGroupID, ""),
+                        }
+                }
+                
+                viewState := &state.ViewState{
+                        Timestamp: time.Now().UTC(),
+                        Articles:  stateMap,
+                }
+                
+                _ = state.Save(viewState)
+        }
+        
+        return nil
 }
 
 func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
@@ -135,6 +162,7 @@ func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
 
         groupedArticles := groupArticlesByStory(articles)
         var articleIDs []int64
+        stateMap := make(map[string]state.ArticleRef)
 
         for i, group := range groupedArticles {
                 primary := group[0]
@@ -152,6 +180,14 @@ func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
                 card := formatCard(i+1, title, sourceName, summary, topics, duplicates)
                 fmt.Fprint(cmd.OutOrStdout(), card)
 
+                idx := strconv.Itoa(i + 1)
+                stateMap[idx] = state.ArticleRef{
+                        ID:           primary.ID,
+                        URL:          formatNullString(primary.Url, ""),
+                        Title:        title,
+                        StoryGroupID: formatNullString(primary.StoryGroupID, ""),
+                }
+
                 for _, article := range group {
                         articleIDs = append(articleIDs, article.ID)
                 }
@@ -162,6 +198,15 @@ func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
                 if err != nil {
                         return err
                 }
+        }
+
+        if len(stateMap) > 0 {
+                viewState := &state.ViewState{
+                        Timestamp: time.Now().UTC(),
+                        Articles:  stateMap,
+                }
+                
+                _ = state.Save(viewState)
         }
 
         return nil
