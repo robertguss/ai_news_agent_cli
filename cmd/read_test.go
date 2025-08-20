@@ -95,7 +95,7 @@ func TestReadCommandSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "https://example.com/article")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("# Test Article\n\nThis is test content."))
+		_, _ = w.Write([]byte("# Test Article\n\nThis is test content."))
 	}))
 	defer server.Close()
 
@@ -135,7 +135,7 @@ func TestReadCommandWithCache(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("# Cached Article\n\nThis is cached content."))
+		_, _ = w.Write([]byte("# Cached Article\n\nThis is cached content."))
 	}))
 	defer server.Close()
 
@@ -176,7 +176,7 @@ func TestReadCommandNoCache(t *testing.T) {
 		requestCount++
 		assert.Contains(t, r.URL.RawQuery, "no-cache=true")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("# Fresh Article\n\nThis is fresh content."))
+		_, _ = w.Write([]byte("# Fresh Article\n\nThis is fresh content."))
 	}))
 	defer server.Close()
 
@@ -214,7 +214,7 @@ func TestReadCommandNoCache(t *testing.T) {
 func TestReadCommandHTTPError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Not Found"))
+		_, _ = w.Write([]byte("Not Found"))
 	}))
 	defer server.Close()
 
@@ -281,7 +281,7 @@ func TestGetArticleContent(t *testing.T) {
 	t.Run("fetches fresh content when cache is old", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("fresh content"))
+			_, _ = w.Write([]byte("fresh content"))
 		}))
 		defer server.Close()
 
@@ -303,7 +303,7 @@ func TestGetArticleContent(t *testing.T) {
 	t.Run("forces fresh fetch with no-cache", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("forced fresh content"))
+			_, _ = w.Write([]byte("forced fresh content"))
 		}))
 		defer server.Close()
 

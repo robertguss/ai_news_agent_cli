@@ -39,7 +39,7 @@ func TestFetchCmd_Integration_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rssContent))
+		_, _ = w.Write([]byte(rssContent))
 	}))
 	defer server.Close()
 
@@ -138,7 +138,7 @@ func TestFetchCmd_Integration_PartialSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rssContent))
+		_, _ = w.Write([]byte(rssContent))
 	}))
 	defer server.Close()
 
@@ -203,7 +203,7 @@ func TestFetchCmd_Integration_WithMockAI(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rssContent))
+		_, _ = w.Write([]byte(rssContent))
 	}))
 	defer server.Close()
 
@@ -300,7 +300,7 @@ func TestFetchCmd_ContinuesOnPartialAIFailures(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/rss+xml")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rssContent))
+		_, _ = w.Write([]byte(rssContent))
 	}))
 	defer server.Close()
 
