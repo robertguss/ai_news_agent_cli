@@ -1,24 +1,17 @@
 package viewui
 
 import (
-        "context"
         "fmt"
         "os/exec"
         "runtime"
         "sort"
         "strings"
-        "time"
 
         "github.com/charmbracelet/bubbles/textinput"
         tea "github.com/charmbracelet/bubbletea"
         "github.com/charmbracelet/lipgloss"
         "github.com/robertguss/ai-news-agent-cli/internal/article"
 )
-
-type ArticleContentMsg struct {
-        Content string
-        Error   error
-}
 
 type ArticleItem struct {
         ID      int64
@@ -27,6 +20,7 @@ type ArticleItem struct {
         Summary string
         URL     string
         IsRead  bool
+        Content string
 }
 
 type FilterMode int
@@ -73,7 +67,6 @@ type Model struct {
         // Article viewing
         viewMode        ViewMode
         articleContent  string
-        isLoading       bool
         loadingError    string
 }
 
@@ -151,14 +144,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 m.width = msg.Width
                 m.height = msg.Height
 
-        case ArticleContentMsg:
-                m.isLoading = false
-                if msg.Error != nil {
-                        m.loadingError = fmt.Sprintf("Failed to load article: %v", msg.Error)
-                } else {
-                        m.articleContent = msg.Content
-                        m.loadingError = ""
-                }
 
         case tea.KeyMsg:
                 // Handle filter mode specific keys
@@ -236,12 +221,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                         case "v":
                                 if len(m.filteredArticles) > 0 {
                                         article := m.getSelectedArticle()
-                                        if article != nil && article.URL != "" {
+                                        if article != nil {
                                                 m.viewMode = ViewModeArticle
-                                                m.isLoading = true
                                                 m.loadingError = ""
-                                                m.articleContent = ""
-                                                return m, m.fetchArticleContent(article.URL)
+                                                
+                                                if article.Content != "" {
+                                                        m.articleContent = article.Content
+                                                } else {
+                                                        m.articleContent = ""
+                                                        m.loadingError = "No content available for this article"
+                                                }
                                         }
                                 }
 
@@ -262,7 +251,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                                 if m.viewMode == ViewModeArticle {
                                         m.viewMode = ViewModeList
                                         m.articleContent = ""
-                                        m.isLoading = false
                                         m.loadingError = ""
                                 } else {
                                         m.clearFilters()
@@ -676,18 +664,6 @@ func formatSummaryWithBullets(summary string, width int) string {
         return strings.Join(lines, "\n")
 }
 
-func (m *Model) fetchArticleContent(url string) tea.Cmd {
-        return tea.Cmd(func() tea.Msg {
-                ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-                defer cancel()
-                
-                content, err := article.FetchArticle(ctx, url, false)
-                return ArticleContentMsg{
-                        Content: content,
-                        Error:   err,
-                }
-        })
-}
 
 func (m Model) renderArticleView() string {
         if m.selectedIndex >= len(m.filteredArticles) {
@@ -705,10 +681,8 @@ func (m Model) renderArticleView() string {
         content.WriteString(fmt.Sprintf("Source: %s", selectedArticle.Source))
         content.WriteString("\n\n")
         
-        // Loading, error, or content
-        if m.isLoading {
-                content.WriteString("🔄 Loading article content...\n\n")
-        } else if m.loadingError != "" {
+        // Error or content
+        if m.loadingError != "" {
                 content.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
         } else if m.articleContent != "" {
                 // Render the markdown content using Glamour

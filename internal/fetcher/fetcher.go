@@ -214,12 +214,19 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
                                 var contentType sql.NullString
                                 var storyGroupID sql.NullString
                                 var analysisStatus = "unprocessed"
+                                var articleContent sql.NullString
 
                                 if deps.Scraper != nil && deps.AI != nil {
                                         content, scrapeErr := deps.Scraper.ScrapeWithRetry(ctx, article.Link, deps.Config)
                                         if scrapeErr != nil {
                                                 logging.Warn("scrape_article", fmt.Sprintf("Failed to scrape %s: %v", article.Link, scrapeErr))
                                         } else {
+                                                // Store the scraped content
+                                                articleContent = sql.NullString{
+                                                        String: content,
+                                                        Valid:  true,
+                                                }
+                                                
                                                 result, aiErr := deps.AI.AnalyzeContentWithRetry(ctx, content, deps.Config)
                                                 if aiErr != nil {
                                                         logging.Warn("ai_analysis", fmt.Sprintf("Failed to analyze %s: %v", article.Link, aiErr))
@@ -274,6 +281,7 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
                                                 Valid:  true,
                                         },
                                         StoryGroupID: storyGroupID,
+                                        Content:      articleContent,
                                 }
 
                                 _, err = deps.Queries.CreateArticle(ctx, params)

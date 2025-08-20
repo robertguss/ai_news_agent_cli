@@ -78,6 +78,7 @@ func runTUIView(dbPath string, opts ViewOptions) error {
                         Summary: formatNullString(article.Summary, ""),
                         URL:     formatNullString(article.Url, ""),
                         IsRead:  article.Status.String == "read",
+                        Content: formatNullString(article.Content, ""),
                 })
         }
 
