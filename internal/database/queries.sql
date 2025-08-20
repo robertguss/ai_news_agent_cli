@@ -21,19 +21,19 @@ SELECT * FROM articles WHERE url = ? LIMIT 1;
 SELECT * FROM articles;
 
 -- name: ListUnreadArticles :many
-SELECT * FROM articles WHERE status = 'unread' ORDER BY published_date DESC;
+SELECT * FROM articles WHERE status != 'read' ORDER BY published_date DESC;
 
 -- name: ListAllArticles :many
 SELECT * FROM articles ORDER BY published_date DESC;
 
 -- name: ListArticlesBySource :many
-SELECT * FROM articles WHERE status = 'unread' AND source_name = ? ORDER BY published_date DESC;
+SELECT * FROM articles WHERE status != 'read' AND source_name = ? ORDER BY published_date DESC;
 
 -- name: ListArticlesByTopic :many
-SELECT * FROM articles WHERE status = 'unread' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+SELECT * FROM articles WHERE status != 'read' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
 
 -- name: ListArticlesBySourceAndTopic :many
-SELECT * FROM articles WHERE status = 'unread' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
+SELECT * FROM articles WHERE status != 'read' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC;
 
 -- name: ListAllArticlesBySource :many
 SELECT * FROM articles WHERE source_name = ? ORDER BY published_date DESC;

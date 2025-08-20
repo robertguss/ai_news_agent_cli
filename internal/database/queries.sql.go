@@ -318,7 +318,7 @@ func (q *Queries) ListArticles(ctx context.Context) ([]Article, error) {
 }
 
 const listArticlesBySource = `-- name: ListArticlesBySource :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status = 'unread' AND source_name = ? ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? ORDER BY published_date DESC
 `
 
 func (q *Queries) ListArticlesBySource(ctx context.Context, sourceName sql.NullString) ([]Article, error) {
@@ -357,7 +357,7 @@ func (q *Queries) ListArticlesBySource(ctx context.Context, sourceName sql.NullS
 }
 
 const listArticlesBySourceAndTopic = `-- name: ListArticlesBySourceAndTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status = 'unread' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 type ListArticlesBySourceAndTopicParams struct {
@@ -401,7 +401,7 @@ func (q *Queries) ListArticlesBySourceAndTopic(ctx context.Context, arg ListArti
 }
 
 const listArticlesByTopic = `-- name: ListArticlesByTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status = 'unread' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 func (q *Queries) ListArticlesByTopic(ctx context.Context, dollar_1 sql.NullString) ([]Article, error) {
@@ -440,7 +440,7 @@ func (q *Queries) ListArticlesByTopic(ctx context.Context, dollar_1 sql.NullStri
 }
 
 const listUnreadArticles = `-- name: ListUnreadArticles :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status = 'unread' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' ORDER BY published_date DESC
 `
 
 func (q *Queries) ListUnreadArticles(ctx context.Context) ([]Article, error) {
