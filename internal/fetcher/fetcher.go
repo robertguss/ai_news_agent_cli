@@ -146,6 +146,10 @@ func StoreArticles(ctx context.Context, queries *database.Queries, articles []Ar
                                                 String: "unread",
                                                 Valid:  true,
                                         },
+                                        AnalysisStatus: sql.NullString{
+                                                String: "unprocessed",
+                                                Valid:  true,
+                                        },
                                         StoryGroupID: sql.NullString{
                                                 String: "",
                                                 Valid:  false,
@@ -262,6 +266,10 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
                                         ContentType: contentType,
                                         Topics:      topics,
                                         Status: sql.NullString{
+                                                String: "unread",
+                                                Valid:  true,
+                                        },
+                                        AnalysisStatus: sql.NullString{
                                                 String: analysisStatus,
                                                 Valid:  true,
                                         },
@@ -334,10 +342,13 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                         var topics []byte
                         var contentType sql.NullString
                         var storyGroupID sql.NullString
+                        var analysisStatus = "unprocessed"
 
                         if deps.Scraper != nil && deps.AI != nil {
                                 content, scrapeErr := deps.Scraper.Scrape(article.Link)
-                                if scrapeErr == nil {
+                                if scrapeErr != nil {
+                                        analysisStatus = "pending"
+                                } else {
                                         progress <- tui.DetailedProgressMsg{
                                                 Source:       source.Name,
                                                 Phase:        tui.PhaseAI,
@@ -347,7 +358,9 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                                         }
 
                                         result, aiErr := deps.AI.AnalyzeContent(content)
-                                        if aiErr == nil && result != nil {
+                                        if aiErr != nil {
+                                                analysisStatus = "pending"
+                                        } else if result != nil {
                                                 summary = sql.NullString{
                                                         String: result.Summary,
                                                         Valid:  true,
@@ -362,6 +375,7 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                                                         String: result.StoryGroupID,
                                                         Valid:  true,
                                                 }
+                                                analysisStatus = "completed"
                                         }
                                 }
                         }
@@ -389,6 +403,10 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                                 Topics:      topics,
                                 Status: sql.NullString{
                                         String: "unread",
+                                        Valid:  true,
+                                },
+                                AnalysisStatus: sql.NullString{
+                                        String: analysisStatus,
                                         Valid:  true,
                                 },
                                 StoryGroupID: storyGroupID,

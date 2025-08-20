@@ -9,15 +9,16 @@ import (
 )
 
 type Article struct {
-	ID            int64
-	Title         sql.NullString
-	Url           sql.NullString
-	SourceName    sql.NullString
-	PublishedDate sql.NullTime
-	Summary       sql.NullString
-	Entities      interface{}
-	ContentType   sql.NullString
-	Topics        interface{}
-	Status        sql.NullString
-	StoryGroupID  sql.NullString
+	ID             int64
+	Title          sql.NullString
+	Url            sql.NullString
+	SourceName     sql.NullString
+	PublishedDate  sql.NullTime
+	Summary        sql.NullString
+	Entities       interface{}
+	ContentType    sql.NullString
+	Topics         interface{}
+	Status         sql.NullString
+	AnalysisStatus sql.NullString
+	StoryGroupID   sql.NullString
 }

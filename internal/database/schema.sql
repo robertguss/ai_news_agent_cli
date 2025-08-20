@@ -9,5 +9,6 @@ CREATE TABLE IF NOT EXISTS articles (
     content_type TEXT,
     topics JSON,
     status TEXT DEFAULT 'unread',
+    analysis_status TEXT DEFAULT 'unprocessed',
     story_group_id TEXT
 );

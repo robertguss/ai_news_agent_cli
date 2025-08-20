@@ -9,9 +9,10 @@ INSERT INTO articles (
     content_type,
     topics,
     status,
+    analysis_status,
     story_group_id
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 ) RETURNING *;
 
 -- name: GetArticleByUrl :one
@@ -55,3 +56,12 @@ SELECT * FROM articles WHERE id = ? LIMIT 1;
 
 -- name: UpdateArticleStatus :exec
 UPDATE articles SET status = ? WHERE id = ?;
+
+-- name: UpdateArticleAnalysisStatus :exec
+UPDATE articles SET analysis_status = ? WHERE id = ?;
+
+-- name: ListUnprocessedArticles :many
+SELECT * FROM articles WHERE analysis_status = 'unprocessed' ORDER BY published_date DESC;
+
+-- name: ListPendingArticles :many
+SELECT * FROM articles WHERE analysis_status = 'pending' ORDER BY published_date DESC;

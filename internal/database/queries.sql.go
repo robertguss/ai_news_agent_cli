@@ -22,23 +22,25 @@ INSERT INTO articles (
     content_type,
     topics,
     status,
+    analysis_status,
     story_group_id
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-) RETURNING id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+) RETURNING id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id
 `
 
 type CreateArticleParams struct {
-	Title         sql.NullString
-	Url           sql.NullString
-	SourceName    sql.NullString
-	PublishedDate sql.NullTime
-	Summary       sql.NullString
-	Entities      interface{}
-	ContentType   sql.NullString
-	Topics        interface{}
-	Status        sql.NullString
-	StoryGroupID  sql.NullString
+	Title          sql.NullString
+	Url            sql.NullString
+	SourceName     sql.NullString
+	PublishedDate  sql.NullTime
+	Summary        sql.NullString
+	Entities       interface{}
+	ContentType    sql.NullString
+	Topics         interface{}
+	Status         sql.NullString
+	AnalysisStatus sql.NullString
+	StoryGroupID   sql.NullString
 }
 
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
@@ -52,6 +54,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		arg.ContentType,
 		arg.Topics,
 		arg.Status,
+		arg.AnalysisStatus,
 		arg.StoryGroupID,
 	)
 	var i Article
@@ -66,13 +69,14 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.ContentType,
 		&i.Topics,
 		&i.Status,
+		&i.AnalysisStatus,
 		&i.StoryGroupID,
 	)
 	return i, err
 }
 
 const getArticle = `-- name: GetArticle :one
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE id = ? LIMIT 1
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
@@ -89,13 +93,14 @@ func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
 		&i.ContentType,
 		&i.Topics,
 		&i.Status,
+		&i.AnalysisStatus,
 		&i.StoryGroupID,
 	)
 	return i, err
 }
 
 const getArticleByUrl = `-- name: GetArticleByUrl :one
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE url = ? LIMIT 1
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE url = ? LIMIT 1
 `
 
 func (q *Queries) GetArticleByUrl(ctx context.Context, url sql.NullString) (Article, error) {
@@ -112,13 +117,14 @@ func (q *Queries) GetArticleByUrl(ctx context.Context, url sql.NullString) (Arti
 		&i.ContentType,
 		&i.Topics,
 		&i.Status,
+		&i.AnalysisStatus,
 		&i.StoryGroupID,
 	)
 	return i, err
 }
 
 const listAllArticles = `-- name: ListAllArticles :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles ORDER BY published_date DESC
 `
 
 func (q *Queries) ListAllArticles(ctx context.Context) ([]Article, error) {
@@ -141,6 +147,7 @@ func (q *Queries) ListAllArticles(ctx context.Context) ([]Article, error) {
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -157,7 +164,7 @@ func (q *Queries) ListAllArticles(ctx context.Context) ([]Article, error) {
 }
 
 const listAllArticlesBySource = `-- name: ListAllArticlesBySource :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE source_name = ? ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE source_name = ? ORDER BY published_date DESC
 `
 
 func (q *Queries) ListAllArticlesBySource(ctx context.Context, sourceName sql.NullString) ([]Article, error) {
@@ -180,6 +187,7 @@ func (q *Queries) ListAllArticlesBySource(ctx context.Context, sourceName sql.Nu
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -196,7 +204,7 @@ func (q *Queries) ListAllArticlesBySource(ctx context.Context, sourceName sql.Nu
 }
 
 const listAllArticlesBySourceAndTopic = `-- name: ListAllArticlesBySourceAndTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 type ListAllArticlesBySourceAndTopicParams struct {
@@ -224,6 +232,7 @@ func (q *Queries) ListAllArticlesBySourceAndTopic(ctx context.Context, arg ListA
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -240,7 +249,7 @@ func (q *Queries) ListAllArticlesBySourceAndTopic(ctx context.Context, arg ListA
 }
 
 const listAllArticlesByTopic = `-- name: ListAllArticlesByTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 func (q *Queries) ListAllArticlesByTopic(ctx context.Context, dollar_1 sql.NullString) ([]Article, error) {
@@ -263,6 +272,7 @@ func (q *Queries) ListAllArticlesByTopic(ctx context.Context, dollar_1 sql.NullS
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -279,7 +289,7 @@ func (q *Queries) ListAllArticlesByTopic(ctx context.Context, dollar_1 sql.NullS
 }
 
 const listArticles = `-- name: ListArticles :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles
 `
 
 func (q *Queries) ListArticles(ctx context.Context) ([]Article, error) {
@@ -302,6 +312,7 @@ func (q *Queries) ListArticles(ctx context.Context) ([]Article, error) {
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -318,7 +329,7 @@ func (q *Queries) ListArticles(ctx context.Context) ([]Article, error) {
 }
 
 const listArticlesBySource = `-- name: ListArticlesBySource :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? ORDER BY published_date DESC
 `
 
 func (q *Queries) ListArticlesBySource(ctx context.Context, sourceName sql.NullString) ([]Article, error) {
@@ -341,6 +352,7 @@ func (q *Queries) ListArticlesBySource(ctx context.Context, sourceName sql.NullS
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -357,7 +369,7 @@ func (q *Queries) ListArticlesBySource(ctx context.Context, sourceName sql.NullS
 }
 
 const listArticlesBySourceAndTopic = `-- name: ListArticlesBySourceAndTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' AND source_name = ? AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 type ListArticlesBySourceAndTopicParams struct {
@@ -385,6 +397,7 @@ func (q *Queries) ListArticlesBySourceAndTopic(ctx context.Context, arg ListArti
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -401,7 +414,7 @@ func (q *Queries) ListArticlesBySourceAndTopic(ctx context.Context, arg ListArti
 }
 
 const listArticlesByTopic = `-- name: ListArticlesByTopic :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' AND JSON_EXTRACT(topics, '$') LIKE '%' || ? || '%' ORDER BY published_date DESC
 `
 
 func (q *Queries) ListArticlesByTopic(ctx context.Context, dollar_1 sql.NullString) ([]Article, error) {
@@ -424,6 +437,87 @@ func (q *Queries) ListArticlesByTopic(ctx context.Context, dollar_1 sql.NullStri
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
+			&i.StoryGroupID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingArticles = `-- name: ListPendingArticles :many
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE analysis_status = 'pending' ORDER BY published_date DESC
+`
+
+func (q *Queries) ListPendingArticles(ctx context.Context) ([]Article, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingArticles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Article
+	for rows.Next() {
+		var i Article
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.SourceName,
+			&i.PublishedDate,
+			&i.Summary,
+			&i.Entities,
+			&i.ContentType,
+			&i.Topics,
+			&i.Status,
+			&i.AnalysisStatus,
+			&i.StoryGroupID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUnprocessedArticles = `-- name: ListUnprocessedArticles :many
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE analysis_status = 'unprocessed' ORDER BY published_date DESC
+`
+
+func (q *Queries) ListUnprocessedArticles(ctx context.Context) ([]Article, error) {
+	rows, err := q.db.QueryContext(ctx, listUnprocessedArticles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Article
+	for rows.Next() {
+		var i Article
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.SourceName,
+			&i.PublishedDate,
+			&i.Summary,
+			&i.Entities,
+			&i.ContentType,
+			&i.Topics,
+			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -440,7 +534,7 @@ func (q *Queries) ListArticlesByTopic(ctx context.Context, dollar_1 sql.NullStri
 }
 
 const listUnreadArticles = `-- name: ListUnreadArticles :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE status != 'read' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' ORDER BY published_date DESC
 `
 
 func (q *Queries) ListUnreadArticles(ctx context.Context) ([]Article, error) {
@@ -463,6 +557,7 @@ func (q *Queries) ListUnreadArticles(ctx context.Context) ([]Article, error) {
 			&i.ContentType,
 			&i.Topics,
 			&i.Status,
+			&i.AnalysisStatus,
 			&i.StoryGroupID,
 		); err != nil {
 			return nil, err
@@ -503,6 +598,20 @@ func (q *Queries) MarkArticlesAsRead(ctx context.Context, ids []int64) error {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
 	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const updateArticleAnalysisStatus = `-- name: UpdateArticleAnalysisStatus :exec
+UPDATE articles SET analysis_status = ? WHERE id = ?
+`
+
+type UpdateArticleAnalysisStatusParams struct {
+	AnalysisStatus sql.NullString
+	ID             int64
+}
+
+func (q *Queries) UpdateArticleAnalysisStatus(ctx context.Context, arg UpdateArticleAnalysisStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateArticleAnalysisStatus, arg.AnalysisStatus, arg.ID)
 	return err
 }
 
