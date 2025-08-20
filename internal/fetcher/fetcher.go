@@ -144,6 +144,10 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
 
                 if err == sql.ErrNoRows {
                         var summary sql.NullString
+                        var entities []byte
+                        var topics []byte
+                        var contentType sql.NullString
+                        var storyGroupID sql.NullString
                         
                         if deps.Scraper != nil && deps.AI != nil {
                                 content, scrapeErr := deps.Scraper.Scrape(article.Link)
@@ -152,6 +156,16 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
                                         if aiErr == nil && result != nil {
                                                 summary = sql.NullString{
                                                         String: result.Summary,
+                                                        Valid:  true,
+                                                }
+                                                entities = result.EntitiesJSON()
+                                                topics = result.TopicsJSON()
+                                                contentType = sql.NullString{
+                                                        String: result.ContentType,
+                                                        Valid:  true,
+                                                }
+                                                storyGroupID = sql.NullString{
+                                                        String: result.StoryGroupID,
                                                         Valid:  true,
                                                 }
                                         }
@@ -176,20 +190,14 @@ func StoreArticlesWithAI(ctx context.Context, deps PipelineDeps, articles []Arti
                                         Valid: true,
                                 },
                                 Summary: summary,
-                                Entities: nil,
-                                ContentType: sql.NullString{
-                                        String: "",
-                                        Valid:  false,
-                                },
-                                Topics: nil,
+                                Entities: entities,
+                                ContentType: contentType,
+                                Topics: topics,
                                 Status: sql.NullString{
                                         String: "unread",
                                         Valid:  true,
                                 },
-                                StoryGroupID: sql.NullString{
-                                        String: "",
-                                        Valid:  false,
-                                },
+                                StoryGroupID: storyGroupID,
                         }
 
                         _, err = deps.Queries.CreateArticle(ctx, params)
