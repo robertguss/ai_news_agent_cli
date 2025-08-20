@@ -1,72 +1,97 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
+        "context"
+        "fmt"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
-	"github.com/robertguss/ai-news-agent-cli/internal/database"
-	"github.com/robertguss/ai-news-agent-cli/internal/fetcher"
-	"github.com/spf13/cobra"
+        "github.com/robertguss/ai-news-agent-cli/internal/ai/processor"
+        "github.com/robertguss/ai-news-agent-cli/internal/ai/processor/mocks"
+        "github.com/robertguss/ai-news-agent-cli/internal/config"
+        "github.com/robertguss/ai-news-agent-cli/internal/database"
+        "github.com/robertguss/ai-news-agent-cli/internal/fetcher"
+        "github.com/robertguss/ai-news-agent-cli/internal/scraper"
+        "github.com/spf13/cobra"
+        "github.com/stretchr/testify/mock"
 )
 
 var (
-	openDB   = database.Open
-	loadCfg  = config.LoadFromPath
-	fetchAnd = fetcher.FetchAndStore
-	initDB   = database.InitSchema
+        openDB   = database.Open
+        loadCfg  = config.LoadFromPath
+        fetchAnd = fetcher.FetchAndStore
+        initDB   = database.InitSchema
 )
 
 var fetchCmd = &cobra.Command{
-	Use:   "fetch",
-	Short: "Fetch articles from configured sources and store them",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+        Use:   "fetch",
+        Short: "Fetch articles from configured sources and store them",
+        RunE: func(cmd *cobra.Command, args []string) error {
+                ctx := context.Background()
 
-		configPath, _ := cmd.Flags().GetString("config")
+                configPath, _ := cmd.Flags().GetString("config")
+                useMockAI, _ := cmd.Flags().GetBool("use-mock-ai")
 
-		cfg, err := loadCfg(configPath)
-		if err != nil {
-			return fmt.Errorf("load config: %w", err)
-		}
+                cfg, err := loadCfg(configPath)
+                if err != nil {
+                        return fmt.Errorf("load config: %w", err)
+                }
 
-		db, queries, err := openDB(cfg.DSN)
-		if err != nil {
-			return fmt.Errorf("open db: %w", err)
-		}
-		defer db.Close()
+                db, queries, err := openDB(cfg.DSN)
+                if err != nil {
+                        return fmt.Errorf("open db: %w", err)
+                }
+                defer db.Close()
 
-		if err := initDB(db); err != nil {
-			return fmt.Errorf("init schema: %w", err)
-		}
+                if err := initDB(db); err != nil {
+                        return fmt.Errorf("init schema: %w", err)
+                }
 
-		var added int
-		var errors []error
+                var added int
+                var errors []error
 
-		for _, source := range cfg.Sources {
-			n, err := fetchAnd(ctx, queries, source)
-			if err != nil {
-				errors = append(errors, fmt.Errorf("source %s: %w", source.Name, err))
-				continue
-			}
-			added += n
-		}
+                for _, source := range cfg.Sources {
+                        var n int
+                        var err error
+                        
+                        if useMockAI {
+                                mockProcessor := new(mocks.AIProcessor)
+                                mockProcessor.On("AnalyzeContent", mock.Anything).Return(&processor.AnalysisResult{
+                                        Summary: "mock summary",
+                                }, nil)
+                                
+                                deps := fetcher.PipelineDeps{
+                                        Scraper: scraper.NewMockScraper("scraped content", nil),
+                                        AI:      mockProcessor,
+                                        Queries: queries,
+                                }
+                                
+                                n, err = fetcher.FetchAndStoreWithAI(ctx, deps, source)
+                        } else {
+                                n, err = fetchAnd(ctx, queries, source)
+                        }
+                        
+                        if err != nil {
+                                errors = append(errors, fmt.Errorf("source %s: %w", source.Name, err))
+                                continue
+                        }
+                        added += n
+                }
 
-		if len(errors) > 0 {
-			fmt.Fprintf(cmd.OutOrStdout(), "Added %d new articles from %d sources\n", added, len(cfg.Sources))
-			fmt.Fprintf(cmd.OutOrStdout(), "%d errors occurred:\n", len(errors))
-			for _, err := range errors {
-				fmt.Fprintf(cmd.OutOrStdout(), "  - %v\n", err)
-			}
-		} else {
-			fmt.Fprintf(cmd.OutOrStdout(), "Added %d new articles from %d sources\n", added, len(cfg.Sources))
-		}
+                if len(errors) > 0 {
+                        fmt.Fprintf(cmd.OutOrStdout(), "Added %d new articles from %d sources\n", added, len(cfg.Sources))
+                        fmt.Fprintf(cmd.OutOrStdout(), "%d errors occurred:\n", len(errors))
+                        for _, err := range errors {
+                                fmt.Fprintf(cmd.OutOrStdout(), "  - %v\n", err)
+                        }
+                } else {
+                        fmt.Fprintf(cmd.OutOrStdout(), "Added %d new articles from %d sources\n", added, len(cfg.Sources))
+                }
 
-		return nil
-	},
+                return nil
+        },
 }
 
 func init() {
-	fetchCmd.Flags().StringP("config", "c", "", "Path to config file")
-	rootCmd.AddCommand(fetchCmd)
+        fetchCmd.Flags().StringP("config", "c", "", "Path to config file")
+        fetchCmd.Flags().Bool("use-mock-ai", false, "Use mock AI processor for testing")
+        rootCmd.AddCommand(fetchCmd)
 }
