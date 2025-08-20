@@ -83,13 +83,16 @@ The application will be operated via a series of commands.
 ### **`ai-news fetch`**
 
   * **Purpose:** Fetches and processes new content.
+  * **Parameters:**
+    * `-n, --limit <number>`: Maximum number of articles to fetch per source (default: 5, 0 = unlimited)
   * **Behavior:**
     1.  Scans all pre-defined sources.
-    2.  Checks the database to see which articles are new.
-    3.  For each new article, it sends the content to the AI API for processing (summarization, extraction, etc.).
-    4.  It performs deduplication analysis against recent articles.
-    5.  Saves the structured data for new items into the SQLite database with an `unread` status.
-    6.  This command should provide simple output indicating its progress and how many new items were added.
+    2.  For each source, retrieves the latest content sorted by publish date (newest first) and applies the article limit.
+    3.  Checks the database to see which articles are new.
+    4.  For each new article, it sends the content to the AI API for processing (summarization, extraction, etc.).
+    5.  It performs deduplication analysis against recent articles.
+    6.  Saves the structured data for new items into the SQLite database with an `unread` status.
+    7.  This command should provide simple output indicating its progress and how many new items were added.
 
 ### **`ai-news view`**
 

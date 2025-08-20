@@ -20,7 +20,7 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 ## Features
 
 ### Current
-- ✅ **Smart Fetching**: Automatically fetch content from configured RSS sources
+- ✅ **Smart Fetching**: Automatically fetch content from configured RSS sources with per-source article limiting
 - ✅ **AI-Powered Processing**: Summarize articles using Google Gemini API
 - ✅ **Local Storage**: SQLite database for offline access and article management
 - ✅ **Terminal-Native Reading**: Beautiful markdown rendering for article content
@@ -75,8 +75,14 @@ cp configs/config.yaml ~/.ainews/config.yaml
 # Check version
 ./ai-news-agent-cli --version
 
-# Fetch latest articles
+# Fetch latest articles (default: 5 per source)
 ./ai-news-agent-cli fetch
+
+# Fetch more articles per source
+./ai-news-agent-cli fetch -n 10
+
+# Fetch unlimited articles (legacy behavior)
+./ai-news-agent-cli fetch -n 0
 
 # View articles
 ./ai-news-agent-cli view
@@ -98,6 +104,10 @@ The CLI supports the following commands:
 # Fetch and process new articles from configured sources
 ./ai-news-agent-cli fetch
 
+# Fetch with custom article limit per source
+./ai-news-agent-cli fetch -n 10        # Max 10 articles per source
+./ai-news-agent-cli fetch --limit 3    # Max 3 articles per source
+
 # View stored articles with AI-generated summaries
 ./ai-news-agent-cli view
 
@@ -114,6 +124,11 @@ The CLI supports the following commands:
 ### Command Options
 
 ```bash
+# Fetch command options
+./ai-news-agent-cli fetch -n 5           # Limit to 5 articles per source (default)
+./ai-news-agent-cli fetch --limit 10     # Limit to 10 articles per source
+./ai-news-agent-cli fetch -n 0           # Unlimited articles (legacy behavior)
+
 # Read command options
 ./ai-news-agent-cli read 1 --no-cache    # Force fresh fetch
 ./ai-news-agent-cli read 1 --no-style    # Plain text output
@@ -125,10 +140,20 @@ The CLI supports the following commands:
 
 ### Example Workflow
 
-1. **Fetch latest articles**: `./ai-news-agent-cli fetch`
+1. **Fetch latest articles**: `./ai-news-agent-cli fetch` (gets 5 newest per source by default)
 2. **Review AI summaries**: `./ai-news-agent-cli view`
 3. **Read interesting articles**: `./ai-news-agent-cli read 2`
 4. **Open complex content in browser**: `./ai-news-agent-cli open 5`
+
+### Article Limiting
+
+By default, the fetch command retrieves the **5 most recent articles** from each RSS source to focus on current news. This provides faster fetching and more relevant content compared to processing entire RSS feeds.
+
+- **Default behavior**: `./ai-news-agent-cli fetch` (5 articles per source)
+- **Custom limit**: `./ai-news-agent-cli fetch -n 10` (10 articles per source)  
+- **Legacy unlimited**: `./ai-news-agent-cli fetch -n 0` (all articles, slower)
+
+Articles are sorted by publish date (newest first) before applying the limit.
 
 ## Configuration
 

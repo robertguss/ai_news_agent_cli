@@ -69,13 +69,16 @@ The tool will expose four main commands:
 #### **`ai-news fetch`**
 
 * **Purpose**: Fetches new content from all sources, processes it, and saves it to the database.
+* **Parameters**:
+    * `-n, --limit <number>`: Maximum number of articles to fetch per source (default: 5, 0 = unlimited)
 * **Behavior**:
     1.  Iterates through the configured sources.
-    2.  For each source, it retrieves the latest content, checking the `url` against the database to avoid re-processing.
-    3.  For each new item, it calls the Cloud AI API to perform all processing tasks.
-    4.  It runs a deduplication check against recent entries to identify story clusters.
-    5.  Saves the fully processed data to the SQLite database with a default `status` of `unread`.
-    6.  The command should output a status message, e.g., "Fetch complete. Added 12 new items."
+    2.  For each source, it retrieves the latest content, sorting by publish date (newest first) and applying the article limit.
+    3.  Checks the `url` against the database to avoid re-processing existing articles.
+    4.  For each new item, it calls the Cloud AI API to perform all processing tasks.
+    5.  It runs a deduplication check against recent entries to identify story clusters.
+    6.  Saves the fully processed data to the SQLite database with a default `status` of `unread`.
+    7.  The command should output a status message, e.g., "Fetch complete. Added 12 new items from 3 sources."
 
 #### **`ai-news view`**
 
