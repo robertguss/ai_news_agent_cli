@@ -360,9 +360,9 @@ func (m Model) renderPreview(width int) string {
         // Summary
         b.WriteString("Summary:\n")
         if article.Summary != "" {
-                // Word wrap the summary
-                wrapped := wordWrap(article.Summary, width-4)
-                b.WriteString(wrapped + "\n\n")
+                // Format summary with bullet points on separate lines
+                formatted := formatSummaryWithBullets(article.Summary, width-4)
+                b.WriteString(formatted + "\n\n")
         } else {
                 b.WriteString("No summary available\n\n")
         }
@@ -594,4 +594,30 @@ func (m Model) shouldShowSourceHeaders() bool {
         }
         
         return len(sourceMap) > 1
+}
+
+func formatSummaryWithBullets(summary string, width int) string {
+        // Split summary by bullet points
+        parts := strings.Split(summary, "•")
+        
+        var lines []string
+        for i, part := range parts {
+                // Skip empty first part (before first bullet)
+                if i == 0 && strings.TrimSpace(part) == "" {
+                        continue
+                }
+                
+                // Clean up the text (remove leading/trailing whitespace)
+                text := strings.TrimSpace(part)
+                if text == "" {
+                        continue
+                }
+                
+                // Add bullet point back and wrap the line
+                bulletText := "• " + text
+                wrapped := wordWrap(bulletText, width)
+                lines = append(lines, wrapped)
+        }
+        
+        return strings.Join(lines, "\n")
 }

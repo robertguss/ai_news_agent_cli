@@ -534,7 +534,7 @@ func (q *Queries) ListUnprocessedArticles(ctx context.Context) ([]Article, error
 }
 
 const listUnreadArticles = `-- name: ListUnreadArticles :many
-SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' ORDER BY published_date DESC
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, analysis_status, story_group_id FROM articles WHERE status != 'read' ORDER BY source_name, published_date DESC
 `
 
 func (q *Queries) ListUnreadArticles(ctx context.Context) ([]Article, error) {

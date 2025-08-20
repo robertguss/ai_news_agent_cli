@@ -17,11 +17,17 @@ type Source struct {
 	Priority int    `mapstructure:"priority"`
 }
 
+// AIConfig holds AI-related configuration settings.
+type AIConfig struct {
+	GeminiModel string `mapstructure:"gemini_model"`
+}
+
 // Config holds the complete application configuration including database settings,
 // news sources, network timeouts, retry policies, and logging configuration.
 type Config struct {
 	DSN     string   `mapstructure:"dsn"`
 	Sources []Source `mapstructure:"sources"`
+	AI      AIConfig `mapstructure:"ai"`
 
 	NetworkTimeout time.Duration `mapstructure:"network_timeout"`
 	MaxRetries     int           `mapstructure:"max_retries"`
@@ -130,6 +136,14 @@ func setDefaults(cfg *Config) {
 		} else {
 			homeDir, _ := os.UserHomeDir()
 			cfg.LogFile = homeDir + "/.ainews/agent.log"
+		}
+	}
+
+	if cfg.AI.GeminiModel == "" {
+		if model := os.Getenv("GEMINI_MODEL"); model != "" {
+			cfg.AI.GeminiModel = model
+		} else {
+			cfg.AI.GeminiModel = "gemini-1.5-flash"
 		}
 	}
 }

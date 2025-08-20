@@ -70,7 +70,7 @@ var fetchCmd = &cobra.Command{
                         aiProcessor = mockProcessor
                 } else {
                         var err error
-                        aiProcessor, err = processor.NewGeminiProcessor(ctx)
+                        aiProcessor, err = processor.NewGeminiProcessor(ctx, cfg.AI.GeminiModel)
                         if err != nil {
                                 return fmt.Errorf("%s", errs.GetUserFriendlyMessage(errs.Wrap("initialize AI processor", err)))
                         }

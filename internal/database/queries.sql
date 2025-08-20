@@ -22,7 +22,7 @@ SELECT * FROM articles WHERE url = ? LIMIT 1;
 SELECT * FROM articles;
 
 -- name: ListUnreadArticles :many
-SELECT * FROM articles WHERE status != 'read' ORDER BY published_date DESC;
+SELECT * FROM articles WHERE status != 'read' ORDER BY source_name, published_date DESC;
 
 -- name: ListAllArticles :many
 SELECT * FROM articles ORDER BY published_date DESC;

@@ -16,7 +16,7 @@ func TestNewGeminiProcessor_Success(t *testing.T) {
 
         os.Setenv("GEMINI_API_KEY", "test-api-key")
 
-        processor, err := NewGeminiProcessor(context.Background())
+        processor, err := NewGeminiProcessor(context.Background(), "gemini-1.5-flash")
         require.NoError(t, err)
         assert.NotNil(t, processor)
 }
@@ -27,7 +27,7 @@ func TestNewGeminiProcessor_MissingAPIKey(t *testing.T) {
 
         os.Unsetenv("GEMINI_API_KEY")
 
-        processor, err := NewGeminiProcessor(context.Background())
+        processor, err := NewGeminiProcessor(context.Background(), "gemini-1.5-flash")
         assert.Error(t, err)
         assert.Nil(t, processor)
         assert.Contains(t, err.Error(), "GEMINI_API_KEY")
@@ -39,7 +39,7 @@ func TestNewGeminiProcessor_EmptyAPIKey(t *testing.T) {
 
         os.Setenv("GEMINI_API_KEY", "")
 
-        processor, err := NewGeminiProcessor(context.Background())
+        processor, err := NewGeminiProcessor(context.Background(), "gemini-1.5-flash")
         assert.Error(t, err)
         assert.Nil(t, processor)
         assert.Contains(t, err.Error(), "GEMINI_API_KEY")
@@ -51,7 +51,7 @@ func TestGeminiProcessor_AnalyzeContent_Success(t *testing.T) {
 
         os.Setenv("GEMINI_API_KEY", "test-api-key")
 
-        processor, err := NewGeminiProcessor(context.Background())
+        processor, err := NewGeminiProcessor(context.Background(), "gemini-1.5-flash")
         require.NoError(t, err)
         require.NotNil(t, processor)
 
@@ -76,7 +76,7 @@ func TestGeminiProcessor_AnalyzeContent_NetworkError(t *testing.T) {
 
         os.Setenv("GEMINI_API_KEY", "invalid-key")
 
-        processor, err := NewGeminiProcessor(context.Background())
+        processor, err := NewGeminiProcessor(context.Background(), "gemini-1.5-flash")
         require.NoError(t, err)
 
         result, err := processor.AnalyzeContent("test content")
