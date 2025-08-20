@@ -1,0 +1,6 @@
+dsn: "./test-ai-news.db"
+sources:
+  - name: "Ars Technica"
+    url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
+    type: "rss"
+    priority: 1

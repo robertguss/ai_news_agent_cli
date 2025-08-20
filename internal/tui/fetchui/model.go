@@ -12,13 +12,15 @@ import (
 )
 
 type SourceProgress struct {
-        Name     string
-        Current  int
-        Total    int
-        Status   string
-        Error    error
-        Progress progress.Model
-        Complete bool
+        Name         string
+        Current      int
+        Total        int
+        Status       string
+        Phase        tui.Phase
+        ArticleTitle string
+        Error        error
+        Progress     progress.Model
+        Complete     bool
 }
 
 type Model struct {
@@ -60,6 +62,10 @@ func New(sourceNames []string) Model {
         }
 }
 
+func (m *Model) SetWorkerCount(count int) {
+        m.workerCount = count
+}
+
 func (m Model) Init() tea.Cmd {
         return tea.Batch(m.spinner.Tick)
 }
@@ -97,6 +103,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                         
                         if msg.Error != nil {
                                 source.Complete = true
+                        }
+                }
+
+        case tui.ArticleProgressMsg:
+                if source, exists := m.sources[msg.Source]; exists {
+                        source.Current = msg.Current
+                        source.Total = msg.Total
+                        source.Phase = msg.Phase
+                        source.ArticleTitle = msg.ArticleTitle
+                        source.Error = msg.Error
+                        
+                        switch msg.Phase {
+                        case tui.PhaseRSSFetch:
+                                source.Status = "Fetching RSS..."
+                        case tui.PhaseScrape:
+                                if msg.ArticleTitle != "" {
+                                        source.Status = fmt.Sprintf("Scraping: %s", msg.ArticleTitle)
+                                } else {
+                                        source.Status = "Scraping content..."
+                                }
+                        case tui.PhaseAI:
+                                if msg.ArticleTitle != "" {
+                                        source.Status = fmt.Sprintf("AI analyzing: %s", msg.ArticleTitle)
+                                } else {
+                                        source.Status = "AI analyzing..."
+                                }
+                        case tui.PhaseDone:
+                                source.Complete = true
+                                source.Status = "Complete"
+                        }
+                        
+                        if msg.Error != nil && msg.Phase != tui.PhaseDone {
+                                source.Status = fmt.Sprintf("Error in %s: %v", msg.Phase, msg.Error)
                         }
                 }
 
