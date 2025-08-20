@@ -14,9 +14,9 @@ func TestLoad_FromConfigsDirectory(t *testing.T) {
 	configsDir := filepath.Join(tempDir, "configs")
 	err := os.MkdirAll(configsDir, 0755)
 	require.NoError(t, err)
-	
+
 	configPath := filepath.Join(configsDir, "config.yaml")
-	
+
 	configContent := `sources:
   - name: "Configs Dir Source"
     url: "https://example.com/configs-feed.xml"

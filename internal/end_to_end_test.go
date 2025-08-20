@@ -70,7 +70,7 @@ func TestEndToEndConfigFetchStore(t *testing.T) {
 
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yaml")
-	
+
 	configContent := `sources:
   - name: "Ars Technica AI"
     url: "` + arsServer.URL + `"
@@ -110,7 +110,7 @@ func TestEndToEndConfigFetchStore(t *testing.T) {
 		stored, err := fetcher.FetchAndStore(ctx, queries, source)
 		require.NoError(t, err)
 		totalStored += stored
-		
+
 		t.Logf("Stored %d articles from %s", stored, source.Name)
 	}
 
@@ -160,7 +160,7 @@ func createTestSchema(db *sql.DB) error {
 		status TEXT DEFAULT 'unread',
 		story_group_id TEXT
 	);`
-	
+
 	_, err := db.Exec(schema)
 	return err
 }

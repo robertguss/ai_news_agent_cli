@@ -45,7 +45,7 @@ func TestConfigAndFetcherIntegration(t *testing.T) {
 
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yaml")
-	
+
 	configContent := `sources:
   - name: "Test OpenAI Blog"
     url: "` + server.URL + `"
