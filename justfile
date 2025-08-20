@@ -72,6 +72,7 @@ generate-mocks:
 clean:
     rm -rf {{BIN_DIR}}
     rm -rf {{DIST_DIR}}
+    rm -rf *.db
     go clean
 
 install: build
