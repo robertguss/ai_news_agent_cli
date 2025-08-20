@@ -1,4 +1,10 @@
 dsn: "./ai-news.db"
+
+ai:
+  # Available models: gemini-1.5-flash, gemini-1.5-pro, gemini-2.5-flash, gemini-2.5-pro, etc.
+  # For full list, see: https://ai.google.dev/gemini-api/docs/models/gemini
+  gemini_model: "gemini-1.5-flash"
+
 sources:
   - name: "Ars Technica AI"
     url: "http://feeds.arstechnica.com/arstechnica/technology-lab"

@@ -4,6 +4,7 @@ import (
         "fmt"
         "os/exec"
         "runtime"
+        "sort"
         "strings"
 
         "github.com/charmbracelet/bubbles/textinput"
@@ -77,6 +78,11 @@ var (
         helpStyle = lipgloss.NewStyle().
                         Foreground(lipgloss.Color("#7D7D7D")).
                         Italic(true)
+
+        headerStyle = lipgloss.NewStyle().
+                        Bold(true).
+                        Foreground(lipgloss.Color("#00D7FF")).
+                        MarginTop(1)
 )
 
 func New(articles []ArticleItem) Model {
@@ -275,7 +281,18 @@ func (m Model) renderArticleList(width int) string {
         }
         b.WriteString("\n")
 
+        // Track previous source for grouping
+        prevSource := ""
+        showHeaders := m.shouldShowSourceHeaders()
+
         for i, article := range m.filteredArticles {
+                // Add source header when source changes
+                if showHeaders && article.Source != prevSource {
+                        sourceCount := m.countBySource(article.Source)
+                        header := fmt.Sprintf("%s (%d)", article.Source, sourceCount)
+                        b.WriteString(headerStyle.Render(header) + "\n")
+                        prevSource = article.Source
+                }
                 var style lipgloss.Style
                 prefix := "  "
 
@@ -341,11 +358,13 @@ func (m Model) renderPreview(width int) string {
         b.WriteString(fmt.Sprintf("Source: %s • Status: %s\n\n", article.Source, status))
 
         // Summary
+        b.WriteString("Summary:\n")
         if article.Summary != "" {
-                b.WriteString("Summary:\n")
-                // Word wrap the summary
-                wrapped := wordWrap(article.Summary, width-4)
-                b.WriteString(wrapped + "\n\n")
+                // Format summary with bullet points on separate lines
+                formatted := formatSummaryWithBullets(article.Summary, width-4)
+                b.WriteString(formatted + "\n\n")
+        } else {
+                b.WriteString("No summary available\n\n")
         }
 
         // URL
@@ -392,6 +411,9 @@ func (m *Model) applyFilters() {
                         m.filteredArticles = append(m.filteredArticles, article)
                 }
         }
+
+        // Sort articles by source while maintaining stable secondary ordering
+        m.sortArticlesBySource()
 
         // Adjust selected index if needed
         if m.selectedIndex >= len(m.filteredArticles) {
@@ -534,4 +556,68 @@ func openBrowser(url string) error {
         }
 
         return cmd.Start()
+}
+
+func (m *Model) sortArticlesBySource() {
+        sort.SliceStable(m.filteredArticles, func(i, j int) bool {
+                if m.filteredArticles[i].Source == m.filteredArticles[j].Source {
+                        return m.filteredArticles[i].ID < m.filteredArticles[j].ID
+                }
+                return m.filteredArticles[i].Source < m.filteredArticles[j].Source
+        })
+}
+
+func (m Model) countBySource(source string) int {
+        count := 0
+        for _, article := range m.filteredArticles {
+                if article.Source == source {
+                        count++
+                }
+        }
+        return count
+}
+
+func (m Model) shouldShowSourceHeaders() bool {
+        if len(m.filteredArticles) == 0 {
+                return false
+        }
+        
+        // Don't show headers if filtering to a specific source
+        if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
+                return false
+        }
+        
+        // Check if we have multiple sources
+        sourceMap := make(map[string]bool)
+        for _, article := range m.filteredArticles {
+                sourceMap[article.Source] = true
+        }
+        
+        return len(sourceMap) > 1
+}
+
+func formatSummaryWithBullets(summary string, width int) string {
+        // Split summary by bullet points
+        parts := strings.Split(summary, "•")
+        
+        var lines []string
+        for i, part := range parts {
+                // Skip empty first part (before first bullet)
+                if i == 0 && strings.TrimSpace(part) == "" {
+                        continue
+                }
+                
+                // Clean up the text (remove leading/trailing whitespace)
+                text := strings.TrimSpace(part)
+                if text == "" {
+                        continue
+                }
+                
+                // Add bullet point back and wrap the line
+                bulletText := "• " + text
+                wrapped := wordWrap(bulletText, width)
+                lines = append(lines, wrapped)
+        }
+        
+        return strings.Join(lines, "\n")
 }

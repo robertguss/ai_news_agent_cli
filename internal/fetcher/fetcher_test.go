@@ -2,14 +2,17 @@ package fetcher
 
 import (
         "context"
+        "database/sql"
         "net/http"
         "net/http/httptest"
         "testing"
         "time"
 
+        "github.com/robertguss/ai-news-agent-cli/internal/database"
         "github.com/robertguss/ai-news-agent-cli/internal/testutil"
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
+        _ "modernc.org/sqlite"
 )
 
 func TestFetch_Success(t *testing.T) {
@@ -149,4 +152,158 @@ func TestFetch_ContextTimeout(t *testing.T) {
 
         assert.Error(t, err)
         assert.Nil(t, articles)
+}
+
+func TestStoreArticlesWithAI_StatusSeparation(t *testing.T) {
+        db, err := sql.Open("sqlite", ":memory:")
+        require.NoError(t, err)
+        defer db.Close()
+
+        err = createTestSchema(db)
+        require.NoError(t, err)
+
+        queries := database.New(db)
+        ctx := context.Background()
+
+        articles := []Article{
+                {
+                        Title:         "Test Article",
+                        Link:          "https://example.com/test-status-separation",
+                        PublishedDate: time.Now(),
+                },
+        }
+
+        source := Source{
+                Name: "Test Source",
+                URL:  "https://example.com/feed",
+        }
+
+        cfg := testutil.TestConfig()
+
+        deps := PipelineDeps{
+                Scraper: nil, // No scraper/AI for this test
+                AI:      nil,
+                Queries: queries,
+                Config:  cfg,
+        }
+
+        stored, err := StoreArticlesWithAI(ctx, deps, articles, source)
+        require.NoError(t, err)
+        assert.Equal(t, 1, stored)
+
+        // Verify the article was stored with correct status separation
+        article, err := queries.GetArticleByUrl(ctx, sql.NullString{
+                String: "https://example.com/test-status-separation",
+                Valid:  true,
+        })
+        require.NoError(t, err)
+
+        // Status should be 'unread' for read/unread tracking
+        assert.Equal(t, "unread", article.Status.String)
+        assert.True(t, article.Status.Valid)
+
+        // AnalysisStatus should be 'unprocessed' since no AI processing occurred
+        assert.Equal(t, "unprocessed", article.AnalysisStatus.String)
+        assert.True(t, article.AnalysisStatus.Valid)
+
+        // Summary should be null/empty since no AI processing occurred
+        assert.False(t, article.Summary.Valid)
+}
+
+func TestStoreArticles_RegularStorage(t *testing.T) {
+        db, err := sql.Open("sqlite", ":memory:")
+        require.NoError(t, err)
+        defer db.Close()
+
+        err = createTestSchema(db)
+        require.NoError(t, err)
+
+        queries := database.New(db)
+        ctx := context.Background()
+
+        articles := []Article{
+                {
+                        Title:         "Regular Article",
+                        Link:          "https://example.com/regular-article",
+                        PublishedDate: time.Now(),
+                },
+        }
+
+        source := Source{
+                Name: "Regular Source",
+                URL:  "https://example.com/feed",
+        }
+
+        cfg := testutil.TestConfig()
+
+        stored, err := StoreArticles(ctx, queries, articles, source, cfg)
+        require.NoError(t, err)
+        assert.Equal(t, 1, stored)
+
+        // Verify the article was stored with correct defaults
+        article, err := queries.GetArticleByUrl(ctx, sql.NullString{
+                String: "https://example.com/regular-article",
+                Valid:  true,
+        })
+        require.NoError(t, err)
+
+        // Status should be 'unread' for read/unread tracking
+        assert.Equal(t, "unread", article.Status.String)
+        assert.True(t, article.Status.Valid)
+
+        // AnalysisStatus should be 'unprocessed' for regular storage
+        assert.Equal(t, "unprocessed", article.AnalysisStatus.String)
+        assert.True(t, article.AnalysisStatus.Valid)
+
+        // Summary should be null since no AI processing
+        assert.False(t, article.Summary.Valid)
+}
+
+func TestStoreArticlesWithAI_WithMockAISuccess(t *testing.T) {
+        db, err := sql.Open("sqlite", ":memory:")
+        require.NoError(t, err)
+        defer db.Close()
+
+        err = createTestSchema(db)
+        require.NoError(t, err)
+
+        queries := database.New(db)
+        ctx := context.Background()
+
+        // Create a mock article with AI-processed data
+        params := database.CreateArticleParams{
+                Title: sql.NullString{String: "AI Processed Article", Valid: true},
+                Url: sql.NullString{String: "https://example.com/ai-processed", Valid: true},
+                SourceName: sql.NullString{String: "AI Test Source", Valid: true},
+                PublishedDate: sql.NullTime{Time: time.Now(), Valid: true},
+                Summary: sql.NullString{String: "AI generated summary", Valid: true},
+                Entities: []byte(`["entity1", "entity2"]`),
+                ContentType: sql.NullString{String: "news", Valid: true},
+                Topics: []byte(`["tech", "ai"]`),
+                Status: sql.NullString{String: "unread", Valid: true},
+                AnalysisStatus: sql.NullString{String: "completed", Valid: true},
+                StoryGroupID: sql.NullString{String: "test-group", Valid: true},
+        }
+
+        article, err := queries.CreateArticle(ctx, params)
+        require.NoError(t, err)
+
+        // Verify the article has correct status separation with AI data
+        assert.Equal(t, "unread", article.Status.String)
+        assert.Equal(t, "completed", article.AnalysisStatus.String)
+        assert.Equal(t, "AI generated summary", article.Summary.String)
+        assert.Equal(t, "news", article.ContentType.String)
+        assert.True(t, article.Summary.Valid)
+        assert.True(t, article.ContentType.Valid)
+
+        // Verify we can retrieve it correctly
+        retrieved, err := queries.GetArticleByUrl(ctx, sql.NullString{
+                String: "https://example.com/ai-processed",
+                Valid:  true,
+        })
+        require.NoError(t, err)
+
+        assert.Equal(t, "unread", retrieved.Status.String)
+        assert.Equal(t, "completed", retrieved.AnalysisStatus.String)
+        assert.Equal(t, "AI generated summary", retrieved.Summary.String)
 }

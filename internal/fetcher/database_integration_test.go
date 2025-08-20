@@ -189,6 +189,7 @@ func createTestSchema(db *sql.DB) error {
                 content_type TEXT,
                 topics JSON,
                 status TEXT DEFAULT 'unread',
+                analysis_status TEXT DEFAULT 'unprocessed',
                 story_group_id TEXT
         );`
 

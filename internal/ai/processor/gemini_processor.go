@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/robertguss/ai-news-agent-cli/internal/config"
@@ -18,12 +19,17 @@ import (
 
 type GeminiProcessor struct {
 	client *genai.Client
+	model  string
 }
 
-func NewGeminiProcessor(ctx context.Context) (*GeminiProcessor, error) {
+func NewGeminiProcessor(ctx context.Context, model string) (*GeminiProcessor, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		return nil, errors.New("GEMINI_API_KEY environment variable is not set")
+	}
+
+	if model == "" {
+		model = "gemini-1.5-flash"
 	}
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
@@ -33,13 +39,14 @@ func NewGeminiProcessor(ctx context.Context) (*GeminiProcessor, error) {
 
 	return &GeminiProcessor{
 		client: client,
+		model:  model,
 	}, nil
 }
 
 func (gp *GeminiProcessor) AnalyzeContent(content string) (*AnalysisResult, error) {
 	ctx := context.Background()
 
-	model := gp.client.GenerativeModel("gemini-pro")
+	model := gp.client.GenerativeModel(gp.model)
 
 	prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
 {
@@ -68,6 +75,9 @@ Article content:
 
 	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
 
+	// Clean the response by removing markdown code block formatting
+	cleanedResponse := cleanJSONResponse(responseText)
+
 	var geminiResponse struct {
 		Summary      string   `json:"summary"`
 		Entities     Entities `json:"entities"`
@@ -76,7 +86,7 @@ Article content:
 		StoryGroupID string   `json:"story_group_id"`
 	}
 
-	if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
+	if err := json.Unmarshal([]byte(cleanedResponse), &geminiResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
 	}
 
@@ -112,7 +122,7 @@ func (gp *GeminiProcessor) AnalyzeContentWithRetry(ctx context.Context, content 
 }
 
 func (gp *GeminiProcessor) analyzeContentInternal(ctx context.Context, content string) (*AnalysisResult, error) {
-	model := gp.client.GenerativeModel("gemini-pro")
+	model := gp.client.GenerativeModel(gp.model)
 
 	prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
 {
@@ -141,6 +151,9 @@ Article content:
 
 	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
 
+	// Clean the response by removing markdown code block formatting
+	cleanedResponse := cleanJSONResponse(responseText)
+
 	var geminiResponse struct {
 		Summary      string   `json:"summary"`
 		Entities     Entities `json:"entities"`
@@ -149,7 +162,7 @@ Article content:
 		StoryGroupID string   `json:"story_group_id"`
 	}
 
-	if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
+	if err := json.Unmarshal([]byte(cleanedResponse), &geminiResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
 	}
 
@@ -165,4 +178,20 @@ Article content:
 func generateStoryGroupID(content string) string {
 	hash := sha256.Sum256([]byte(content))
 	return fmt.Sprintf("%x", hash)[:16]
+}
+
+// cleanJSONResponse removes markdown code block formatting from the response.
+func cleanJSONResponse(response string) string {
+	// Remove markdown code block markers
+	response = strings.TrimSpace(response)
+	if strings.HasPrefix(response, "```json") {
+		response = strings.TrimPrefix(response, "```json")
+	}
+	if strings.HasPrefix(response, "```") {
+		response = strings.TrimPrefix(response, "```")
+	}
+	if strings.HasSuffix(response, "```") {
+		response = strings.TrimSuffix(response, "```")
+	}
+	return strings.TrimSpace(response)
 }
