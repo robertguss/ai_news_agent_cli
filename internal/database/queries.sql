@@ -46,3 +46,12 @@ SELECT * FROM articles WHERE source_name = ? AND JSON_EXTRACT(topics, '$') LIKE 
 
 -- name: MarkArticlesAsRead :exec
 UPDATE articles SET status = 'read' WHERE id IN (sqlc.slice('ids'));
+
+-- name: MarkArticleAsRead :exec
+UPDATE articles SET status = 'read' WHERE id = ?;
+
+-- name: GetArticle :one
+SELECT * FROM articles WHERE id = ? LIMIT 1;
+
+-- name: UpdateArticleStatus :exec
+UPDATE articles SET status = ? WHERE id = ?;

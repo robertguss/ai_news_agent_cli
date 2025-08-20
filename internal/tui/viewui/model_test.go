@@ -9,8 +9,8 @@ import (
 
 func TestModel_InitialState(t *testing.T) {
         articles := []ArticleItem{
-                {ID: 1, Title: "Test Article 1", Source: "Test Source 1"},
-                {ID: 2, Title: "Test Article 2", Source: "Test Source 2"},
+                {ID: 1, Title: "Test Article 1", Source: "Test Source 1", Summary: "Summary 1", URL: "http://example.com/1", IsRead: false},
+                {ID: 2, Title: "Test Article 2", Source: "Test Source 2", Summary: "Summary 2", URL: "http://example.com/2", IsRead: true},
         }
         
         model := New(articles)
@@ -18,11 +18,13 @@ func TestModel_InitialState(t *testing.T) {
         assert.Equal(t, 2, len(model.articles))
         assert.Equal(t, 0, model.selectedIndex)
         assert.Equal(t, "Test Article 1", model.articles[0].Title)
+        assert.False(t, model.articles[0].IsRead)
+        assert.True(t, model.articles[1].IsRead)
 }
 
 func TestModel_QuitOnQKey(t *testing.T) {
         articles := []ArticleItem{
-                {ID: 1, Title: "Test Article", Source: "Test Source"},
+                {ID: 1, Title: "Test Article", Source: "Test Source", Summary: "Summary", URL: "http://example.com", IsRead: false},
         }
         
         model := New(articles)

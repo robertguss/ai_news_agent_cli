@@ -69,14 +69,42 @@ func runTUIView(dbPath string, opts ViewOptions) error {
         var tuiArticles []viewui.ArticleItem
         for _, article := range articles {
                 tuiArticles = append(tuiArticles, viewui.ArticleItem{
-                        ID:     article.ID,
-                        Title:  formatNullString(article.Title, "(no title)"),
-                        Source: formatNullString(article.SourceName, "(no source)"),
+                        ID:      article.ID,
+                        Title:   formatNullString(article.Title, "(no title)"),
+                        Source:  formatNullString(article.SourceName, "(no source)"),
+                        Summary: formatNullString(article.Summary, "No summary available"),
+                        URL:     formatNullString(article.Url, ""),
+                        IsRead:  article.Status.String == "read",
                 })
         }
 
         model := viewui.New(tuiArticles)
-        p := tea.NewProgram(model)
+        
+        // Set up database callback functions
+        model.SetCallbacks(
+                func(id int64) error {
+                        return q.MarkArticleAsRead(ctx, id)
+                },
+                func(id int64) error {
+                        // Get current status
+                        article, err := q.GetArticle(ctx, id)
+                        if err != nil {
+                                return err
+                        }
+                        
+                        newStatus := "read"
+                        if article.Status.String == "read" {
+                                newStatus = "unread"
+                        }
+                        
+                        return q.UpdateArticleStatus(ctx, database.UpdateArticleStatusParams{
+                                ID:     id,
+                                Status: sql.NullString{String: newStatus, Valid: true},
+                        })
+                },
+        )
+        
+        p := tea.NewProgram(model, tea.WithAltScreen())
         
         _, err = p.Run()
         return err

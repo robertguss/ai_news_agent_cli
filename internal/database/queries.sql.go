@@ -71,6 +71,29 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 	return i, err
 }
 
+const getArticle = `-- name: GetArticle :one
+SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE id = ? LIMIT 1
+`
+
+func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
+	row := q.db.QueryRowContext(ctx, getArticle, id)
+	var i Article
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.SourceName,
+		&i.PublishedDate,
+		&i.Summary,
+		&i.Entities,
+		&i.ContentType,
+		&i.Topics,
+		&i.Status,
+		&i.StoryGroupID,
+	)
+	return i, err
+}
+
 const getArticleByUrl = `-- name: GetArticleByUrl :one
 SELECT id, title, url, source_name, published_date, summary, entities, content_type, topics, status, story_group_id FROM articles WHERE url = ? LIMIT 1
 `
@@ -455,6 +478,15 @@ func (q *Queries) ListUnreadArticles(ctx context.Context) ([]Article, error) {
 	return items, nil
 }
 
+const markArticleAsRead = `-- name: MarkArticleAsRead :exec
+UPDATE articles SET status = 'read' WHERE id = ?
+`
+
+func (q *Queries) MarkArticleAsRead(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, markArticleAsRead, id)
+	return err
+}
+
 const markArticlesAsRead = `-- name: MarkArticlesAsRead :exec
 UPDATE articles SET status = 'read' WHERE id IN (/*SLICE:ids*/?)
 `
@@ -471,5 +503,19 @@ func (q *Queries) MarkArticlesAsRead(ctx context.Context, ids []int64) error {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
 	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
+const updateArticleStatus = `-- name: UpdateArticleStatus :exec
+UPDATE articles SET status = ? WHERE id = ?
+`
+
+type UpdateArticleStatusParams struct {
+	Status sql.NullString
+	ID     int64
+}
+
+func (q *Queries) UpdateArticleStatus(ctx context.Context, arg UpdateArticleStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateArticleStatus, arg.Status, arg.ID)
 	return err
 }
