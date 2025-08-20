@@ -7,8 +7,10 @@ import (
         "fmt"
         "strings"
 
+        tea "github.com/charmbracelet/bubbletea"
         "github.com/robertguss/ai-news-agent-cli/internal/database"
         "github.com/robertguss/ai-news-agent-cli/internal/tui"
+        "github.com/robertguss/ai-news-agent-cli/internal/tui/viewui"
         "github.com/spf13/cobra"
 )
 
@@ -46,7 +48,38 @@ var viewCmd = &cobra.Command{
 }
 
 func runTUIView(dbPath string, opts ViewOptions) error {
-        return fmt.Errorf("TUI view not implemented yet")
+        db, q, err := databaseOpen(dbPath)
+        if err != nil {
+                return err
+        }
+        defer db.Close()
+
+        err = database.InitSchema(db)
+        if err != nil {
+                return err
+        }
+
+        ctx := context.Background()
+        articles, err := getFilteredArticles(ctx, q, opts.All, opts.Source, opts.Topic)
+        if err != nil {
+                return err
+        }
+
+        // Convert database articles to TUI articles
+        var tuiArticles []viewui.ArticleItem
+        for _, article := range articles {
+                tuiArticles = append(tuiArticles, viewui.ArticleItem{
+                        ID:     article.ID,
+                        Title:  formatNullString(article.Title, "(no title)"),
+                        Source: formatNullString(article.SourceName, "(no source)"),
+                })
+        }
+
+        model := viewui.New(tuiArticles)
+        p := tea.NewProgram(model)
+        
+        _, err = p.Run()
+        return err
 }
 
 func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
