@@ -14,6 +14,8 @@ import (
         "github.com/robertguss/ai-news-agent-cli/internal/scraper"
         "github.com/robertguss/ai-news-agent-cli/internal/tui"
         "github.com/robertguss/ai-news-agent-cli/internal/tui/fetchui"
+        "github.com/robertguss/ai-news-agent-cli/pkg/errs"
+        "github.com/robertguss/ai-news-agent-cli/pkg/logging"
         "github.com/spf13/cobra"
         "github.com/stretchr/testify/mock"
 )
@@ -38,17 +40,21 @@ var fetchCmd = &cobra.Command{
 
                 cfg, err := loadCfg(configPath)
                 if err != nil {
-                        return fmt.Errorf("load config: %w", err)
+                        return fmt.Errorf("%s", errs.GetUserFriendlyMessage(errs.Wrap("load config", err)))
+                }
+
+                if err := logging.Init(cfg.LogFile); err != nil {
+                        return fmt.Errorf("failed to initialize logging: %w", err)
                 }
 
                 db, queries, err := openDB(cfg.DSN)
                 if err != nil {
-                        return fmt.Errorf("open db: %w", err)
+                        return fmt.Errorf("%s", errs.GetUserFriendlyMessage(err))
                 }
                 defer db.Close()
 
                 if err := initDB(db); err != nil {
-                        return fmt.Errorf("init schema: %w", err)
+                        return fmt.Errorf("%s", errs.GetUserFriendlyMessage(err))
                 }
 
                 var aiProcessor processor.AIProcessor
@@ -58,12 +64,15 @@ var fetchCmd = &cobra.Command{
                         mockProcessor.On("AnalyzeContent", mock.Anything).Return(&processor.AnalysisResult{
                                 Summary: "mock summary",
                         }, nil)
+                        mockProcessor.On("AnalyzeContentWithRetry", mock.Anything, mock.Anything, mock.Anything).Return(&processor.AnalysisResult{
+                                Summary: "mock summary with retry",
+                        }, nil)
                         aiProcessor = mockProcessor
                 } else {
                         var err error
                         aiProcessor, err = processor.NewGeminiProcessor(ctx)
                         if err != nil {
-                                return fmt.Errorf("failed to initialize Gemini processor: %w", err)
+                                return fmt.Errorf("%s", errs.GetUserFriendlyMessage(errs.Wrap("initialize AI processor", err)))
                         }
                 }
 
@@ -111,6 +120,7 @@ func runInteractiveFetch(ctx context.Context, cfg *config.Config, queries *datab
                                 Scraper: scraper.NewJinaScraper(),
                                 AI:      aiProcessor,
                                 Queries: queries,
+                                Config:  cfg,
                         }
                         
                         return fetcher.FetchAndStoreWithAIProgress(ctx, deps, source, progressCh)
@@ -174,11 +184,13 @@ func runPlainFetch(ctx context.Context, cmd *cobra.Command, cfg *config.Config, 
                         Scraper: scraper.NewJinaScraper(),
                         AI:      aiProcessor,
                         Queries: queries,
+                        Config:  cfg,
                 }
                 
                 n, err := fetcher.FetchAndStoreWithAI(ctx, deps, source)
                 if err != nil {
-                        errors = append(errors, fmt.Errorf("source %s: %w", source.Name, err))
+                        userFriendlyErr := errs.GetUserFriendlyMessage(err)
+                        errors = append(errors, fmt.Errorf("source %s: %s", source.Name, userFriendlyErr))
                         continue
                 }
                 added += n
