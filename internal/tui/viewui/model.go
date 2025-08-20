@@ -1,16 +1,24 @@
 package viewui
 
 import (
+        "context"
         "fmt"
         "os/exec"
         "runtime"
         "sort"
         "strings"
+        "time"
 
         "github.com/charmbracelet/bubbles/textinput"
         tea "github.com/charmbracelet/bubbletea"
         "github.com/charmbracelet/lipgloss"
+        "github.com/robertguss/ai-news-agent-cli/internal/article"
 )
+
+type ArticleContentMsg struct {
+        Content string
+        Error   error
+}
 
 type ArticleItem struct {
         ID      int64
@@ -28,6 +36,13 @@ const (
         FilterSearch
         FilterSource
         FilterReadStatus
+)
+
+type ViewMode int
+
+const (
+        ViewModeList ViewMode = iota
+        ViewModeArticle
 )
 
 type ReadStatusFilter int
@@ -54,6 +69,12 @@ type Model struct {
         availableSources []string
         sourceIndex      int
         readStatusFilter ReadStatusFilter
+
+        // Article viewing
+        viewMode        ViewMode
+        articleContent  string
+        isLoading       bool
+        loadingError    string
 }
 
 var (
@@ -130,6 +151,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 m.width = msg.Width
                 m.height = msg.Height
 
+        case ArticleContentMsg:
+                m.isLoading = false
+                if msg.Error != nil {
+                        m.loadingError = fmt.Sprintf("Failed to load article: %v", msg.Error)
+                } else {
+                        m.articleContent = msg.Content
+                        m.loadingError = ""
+                }
+
         case tea.KeyMsg:
                 // Handle filter mode specific keys
                 if m.filterMode == FilterSearch {
@@ -203,6 +233,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                                         }
                                 }
 
+                        case "v":
+                                if len(m.filteredArticles) > 0 {
+                                        article := m.getSelectedArticle()
+                                        if article != nil && article.URL != "" {
+                                                m.viewMode = ViewModeArticle
+                                                m.isLoading = true
+                                                m.loadingError = ""
+                                                m.articleContent = ""
+                                                return m, m.fetchArticleContent(article.URL)
+                                        }
+                                }
+
                         case "/":
                                 m.filterMode = FilterSearch
                                 m.searchInput.Focus()
@@ -217,8 +259,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                                 m.applyFilters()
 
                         case "esc":
-                                m.clearFilters()
-                                m.applyFilters()
+                                if m.viewMode == ViewModeArticle {
+                                        m.viewMode = ViewModeList
+                                        m.articleContent = ""
+                                        m.isLoading = false
+                                        m.loadingError = ""
+                                } else {
+                                        m.clearFilters()
+                                        m.applyFilters()
+                                }
                         }
                 }
         }
@@ -228,6 +277,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
         if len(m.articles) == 0 {
                 return "No articles found.\n\nPress 'q' to quit"
+        }
+
+        // Handle article view mode
+        if m.viewMode == ViewModeArticle {
+                return m.renderArticleView()
         }
 
         // Show search input if in search mode
@@ -331,7 +385,7 @@ func (m Model) renderArticleList(width int) string {
         }
 
         b.WriteString("\n")
-        b.WriteString(helpStyle.Render("↑↓ navigate • Enter preview • Space open • R toggle"))
+        b.WriteString(helpStyle.Render("↑↓ navigate • Enter preview • Space open • V view • R toggle"))
         b.WriteString("\n")
         b.WriteString(helpStyle.Render("/ search • S source • F filter • ESC clear • Q quit"))
 
@@ -373,7 +427,7 @@ func (m Model) renderPreview(width int) string {
         }
 
         // Help text
-        b.WriteString(helpStyle.Render("Enter to mark as read • Space to open in browser"))
+        b.WriteString(helpStyle.Render("Enter to mark as read • Space to open in browser • V to view in terminal"))
 
         return previewStyle.Width(width).Render(b.String())
 }
@@ -620,4 +674,57 @@ func formatSummaryWithBullets(summary string, width int) string {
         }
         
         return strings.Join(lines, "\n")
+}
+
+func (m *Model) fetchArticleContent(url string) tea.Cmd {
+        return tea.Cmd(func() tea.Msg {
+                ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+                defer cancel()
+                
+                content, err := article.FetchArticle(ctx, url, false)
+                return ArticleContentMsg{
+                        Content: content,
+                        Error:   err,
+                }
+        })
+}
+
+func (m Model) renderArticleView() string {
+        if m.selectedIndex >= len(m.filteredArticles) {
+                return "No article selected\n\nPress 'esc' to go back"
+        }
+
+        selectedArticle := m.filteredArticles[m.selectedIndex]
+        
+        var content strings.Builder
+        
+        // Article header
+        header := fmt.Sprintf("📖 %s", selectedArticle.Title)
+        content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
+        content.WriteString("\n")
+        content.WriteString(fmt.Sprintf("Source: %s", selectedArticle.Source))
+        content.WriteString("\n\n")
+        
+        // Loading, error, or content
+        if m.isLoading {
+                content.WriteString("🔄 Loading article content...\n\n")
+        } else if m.loadingError != "" {
+                content.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
+        } else if m.articleContent != "" {
+                // Render the markdown content using Glamour
+                var buf strings.Builder
+                if err := article.RenderMarkdown(m.articleContent, true, &buf); err != nil {
+                        content.WriteString(fmt.Sprintf("Error rendering content: %v\n\n%s", err, m.articleContent))
+                } else {
+                        content.WriteString(buf.String())
+                }
+                content.WriteString("\n")
+        } else {
+                content.WriteString("No content available\n\n")
+        }
+        
+        // Help text
+        content.WriteString(helpStyle.Render("Press 'esc' to go back • 'q' to quit"))
+        
+        return content.String()
 }
