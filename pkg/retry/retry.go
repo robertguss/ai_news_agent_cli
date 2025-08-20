@@ -8,24 +8,27 @@ import (
 	"github.com/robertguss/ai-news-agent-cli/pkg/errs"
 )
 
+// Config defines retry behavior with exponential backoff parameters.
 type Config struct {
-	MaxRetries  int
-	BaseDelay   time.Duration
-	MaxDelay    time.Duration
-	Multiplier  float64
-	MaxElapsed  time.Duration
+	MaxRetries int
+	BaseDelay  time.Duration
+	MaxDelay   time.Duration
+	Multiplier float64
+	MaxElapsed time.Duration
 }
 
+// DefaultConfig returns a retry configuration with sensible defaults.
 func DefaultConfig() Config {
 	return Config{
-		MaxRetries:  3,
-		BaseDelay:   250 * time.Millisecond,
-		MaxDelay:    2 * time.Second,
-		Multiplier:  2.0,
-		MaxElapsed:  30 * time.Second,
+		MaxRetries: 3,
+		BaseDelay:  250 * time.Millisecond,
+		MaxDelay:   2 * time.Second,
+		Multiplier: 2.0,
+		MaxElapsed: 30 * time.Second,
 	}
 }
 
+// Do executes a function with exponential backoff retry logic.
 func Do(ctx context.Context, config Config, fn func() error) error {
 	if config.MaxRetries <= 0 {
 		return fn()

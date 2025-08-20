@@ -1,21 +1,21 @@
 package cmd
 
 import (
-        "bytes"
-        "database/sql"
-        "net/http"
-        "net/http/httptest"
-        "os"
-        "path/filepath"
-        "testing"
+	"bytes"
+	"database/sql"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
 
-        "github.com/stretchr/testify/assert"
-        "github.com/stretchr/testify/require"
-        _ "modernc.org/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
 
 func TestFetchCmd_Integration_Success(t *testing.T) {
-        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+	rssContent := `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
         <title>Test Feed</title>
@@ -36,65 +36,65 @@ func TestFetchCmd_Integration_Success(t *testing.T) {
     </channel>
 </rss>`
 
-        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/rss+xml")
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(rssContent))
-        }))
-        defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(rssContent))
+	}))
+	defer server.Close()
 
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
 
-        configContent := `dsn: "` + dbPath + `"
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Test Source"
     url: "` + server.URL + `"
     type: "rss"
     priority: 1`
 
-        err := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, err)
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output := buf.String()
-        assert.Contains(t, output, "Added 2 new articles")
-        assert.Contains(t, output, "from 1 sources")
+	output := buf.String()
+	assert.Contains(t, output, "Added 2 new articles")
+	assert.Contains(t, output, "from 1 sources")
 
-        db, err := sql.Open("sqlite", dbPath)
-        require.NoError(t, err)
-        defer db.Close()
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	defer db.Close()
 
-        var count int
-        err = db.QueryRow("SELECT COUNT(*) FROM articles").Scan(&count)
-        require.NoError(t, err)
-        assert.Equal(t, 2, count)
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM articles").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
 
-        buf.Reset()
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	buf.Reset()
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output = buf.String()
-        assert.Contains(t, output, "Added 0 new articles")
-        assert.Contains(t, output, "from 1 sources")
+	output = buf.String()
+	assert.Contains(t, output, "Added 0 new articles")
+	assert.Contains(t, output, "from 1 sources")
 }
 
 func TestFetchCmd_Integration_NetworkError(t *testing.T) {
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
 
-        configContent := `dsn: "` + dbPath + `"
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Bad Source"
     url: "http://nonexistent-domain-12345.com/feed.xml"
@@ -105,25 +105,25 @@ sources:
     type: "rss"
     priority: 1`
 
-        err := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, err)
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output := buf.String()
-        assert.Contains(t, output, "Added 0 new articles")
-        assert.Contains(t, output, "2 errors occurred")
+	output := buf.String()
+	assert.Contains(t, output, "Added 0 new articles")
+	assert.Contains(t, output, "2 errors occurred")
 }
 
 func TestFetchCmd_Integration_PartialSuccess(t *testing.T) {
-        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+	rssContent := `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
         <title>Test Feed</title>
@@ -135,18 +135,18 @@ func TestFetchCmd_Integration_PartialSuccess(t *testing.T) {
     </channel>
 </rss>`
 
-        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/rss+xml")
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(rssContent))
-        }))
-        defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(rssContent))
+	}))
+	defer server.Close()
 
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
 
-        configContent := `dsn: "` + dbPath + `"
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Working Source"
     url: "` + server.URL + `"
@@ -157,35 +157,35 @@ sources:
     type: "rss"
     priority: 1`
 
-        err := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, err)
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output := buf.String()
-        assert.Contains(t, output, "Added 1 new articles")
-        assert.Contains(t, output, "from 2 sources")
-        assert.Contains(t, output, "1 errors occurred")
+	output := buf.String()
+	assert.Contains(t, output, "Added 1 new articles")
+	assert.Contains(t, output, "from 2 sources")
+	assert.Contains(t, output, "1 errors occurred")
 
-        db, err := sql.Open("sqlite", dbPath)
-        require.NoError(t, err)
-        defer db.Close()
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	defer db.Close()
 
-        var count int
-        err = db.QueryRow("SELECT COUNT(*) FROM articles").Scan(&count)
-        require.NoError(t, err)
-        assert.Equal(t, 1, count)
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM articles").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
 }
 
 func TestFetchCmd_Integration_WithMockAI(t *testing.T) {
-        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+	rssContent := `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
         <title>Test Feed</title>
@@ -200,85 +200,85 @@ func TestFetchCmd_Integration_WithMockAI(t *testing.T) {
     </channel>
 </rss>`
 
-        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/rss+xml")
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(rssContent))
-        }))
-        defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(rssContent))
+	}))
+	defer server.Close()
 
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
 
-        configContent := `dsn: "` + dbPath + `"
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Test Source"
     url: "` + server.URL + `"
     type: "rss"
     priority: 1`
 
-        err := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, err)
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output := buf.String()
-        assert.Contains(t, output, "Added 1 new articles")
+	output := buf.String()
+	assert.Contains(t, output, "Added 1 new articles")
 
-        db, err := sql.Open("sqlite", dbPath)
-        require.NoError(t, err)
-        defer db.Close()
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	defer db.Close()
 
-        var summary sql.NullString
-        err = db.QueryRow("SELECT summary FROM articles WHERE url = ?", "https://example.com/article1").Scan(&summary)
-        require.NoError(t, err)
-        assert.True(t, summary.Valid)
-        assert.Equal(t, "mock summary", summary.String)
+	var summary sql.NullString
+	err = db.QueryRow("SELECT summary FROM articles WHERE url = ?", "https://example.com/article1").Scan(&summary)
+	require.NoError(t, err)
+	assert.True(t, summary.Valid)
+	assert.Equal(t, "mock summary", summary.String)
 }
 
 func TestFetchCmd_FailsWhenNoGeminiAPIKey(t *testing.T) {
-        // Use t.Setenv to safely unset the environment variable for this test
-        t.Setenv("GEMINI_API_KEY", "")
-        
-        // Verify the environment variable is actually unset
-        apiKey := os.Getenv("GEMINI_API_KEY")
-        require.Empty(t, apiKey, "GEMINI_API_KEY should be unset for this test")
+	// Use t.Setenv to safely unset the environment variable for this test
+	t.Setenv("GEMINI_API_KEY", "")
 
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	// Verify the environment variable is actually unset
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	require.Empty(t, apiKey, "GEMINI_API_KEY should be unset for this test")
 
-        configContent := `dsn: "` + dbPath + `"
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Test Source"
     url: "http://example.com/feed.xml"
     type: "rss"
     priority: 1`
 
-        writeErr := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, writeErr)
+	writeErr := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, writeErr)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath})
 
-        err := cmd.Execute()
-        require.Error(t, err, "Command should fail when GEMINI_API_KEY is not set")
-        assert.Contains(t, err.Error(), "GEMINI_API_KEY")
+	err := cmd.Execute()
+	require.Error(t, err, "Command should fail when GEMINI_API_KEY is not set")
+	assert.Contains(t, err.Error(), "GEMINI_API_KEY")
 }
 
 func TestFetchCmd_ContinuesOnPartialAIFailures(t *testing.T) {
-        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+	rssContent := `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
     <channel>
         <title>Test Feed</title>
@@ -297,45 +297,45 @@ func TestFetchCmd_ContinuesOnPartialAIFailures(t *testing.T) {
     </channel>
 </rss>`
 
-        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-                w.Header().Set("Content-Type", "application/rss+xml")
-                w.WriteHeader(http.StatusOK)
-                w.Write([]byte(rssContent))
-        }))
-        defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/rss+xml")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(rssContent))
+	}))
+	defer server.Close()
 
-        tmpDir := t.TempDir()
-        dbPath := filepath.Join(tmpDir, "test.db")
-        configPath := filepath.Join(tmpDir, "config.yaml")
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	configPath := filepath.Join(tmpDir, "config.yaml")
 
-        configContent := `dsn: "` + dbPath + `"
+	configContent := `dsn: "` + dbPath + `"
 sources:
   - name: "Test Source"
     url: "` + server.URL + `"
     type: "rss"
     priority: 1`
 
-        err := os.WriteFile(configPath, []byte(configContent), 0644)
-        require.NoError(t, err)
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	require.NoError(t, err)
 
-        cmd := NewRootCmd()
-        cmd.AddCommand(fetchCmd)
-        buf := new(bytes.Buffer)
-        cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+	cmd := NewRootCmd()
+	cmd.AddCommand(fetchCmd)
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
-        err = cmd.Execute()
-        assert.NoError(t, err)
+	err = cmd.Execute()
+	assert.NoError(t, err)
 
-        output := buf.String()
-        assert.Contains(t, output, "Added 2 new articles")
+	output := buf.String()
+	assert.Contains(t, output, "Added 2 new articles")
 
-        db, err := sql.Open("sqlite", dbPath)
-        require.NoError(t, err)
-        defer db.Close()
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	defer db.Close()
 
-        var count int
-        err = db.QueryRow("SELECT COUNT(*) FROM articles WHERE summary IS NOT NULL").Scan(&count)
-        require.NoError(t, err)
-        assert.Equal(t, 2, count)
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM articles WHERE summary IS NOT NULL").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
 }

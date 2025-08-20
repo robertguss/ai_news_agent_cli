@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/robertguss/ai-news-agent-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,8 +48,9 @@ func TestFetch_Success(t *testing.T) {
 		Priority: 1,
 	}
 
+	cfg := testutil.TestConfig()
 	ctx := context.Background()
-	articles, err := Fetch(ctx, source)
+	articles, err := Fetch(ctx, source, cfg)
 
 	require.NoError(t, err)
 	require.Len(t, articles, 2)
@@ -73,7 +75,8 @@ func TestFetch_NetworkError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	articles, err := Fetch(ctx, source)
+	cfg := testutil.TestConfig()
+	articles, err := Fetch(ctx, source, cfg)
 
 	assert.Error(t, err)
 	assert.Nil(t, articles)
@@ -95,7 +98,8 @@ func TestFetch_InvalidRSS(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	articles, err := Fetch(ctx, source)
+	cfg := testutil.TestConfig()
+	articles, err := Fetch(ctx, source, cfg)
 
 	assert.Error(t, err)
 	assert.Nil(t, articles)
@@ -115,7 +119,8 @@ func TestFetch_HTTPError(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	articles, err := Fetch(ctx, source)
+	cfg := testutil.TestConfig()
+	articles, err := Fetch(ctx, source, cfg)
 
 	assert.Error(t, err)
 	assert.Nil(t, articles)
@@ -138,7 +143,8 @@ func TestFetch_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	articles, err := Fetch(ctx, source)
+	cfg := testutil.TestConfig()
+	articles, err := Fetch(ctx, source, cfg)
 
 	assert.Error(t, err)
 	assert.Nil(t, articles)

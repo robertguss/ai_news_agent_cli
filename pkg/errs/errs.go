@@ -9,6 +9,7 @@ import (
 	"syscall"
 )
 
+// ErrorType represents different categories of errors for classification and handling.
 type ErrorType int
 
 const (
@@ -39,17 +40,19 @@ func (e *AppError) Unwrap() error {
 	return e.Err
 }
 
+// Wrap wraps an error with operation context and automatic error classification.
+// It returns nil if the input error is nil, otherwise creates an AppError with context.
 func Wrap(operation string, err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	appErr := &AppError{
 		Operation: operation,
 		Err:       err,
 		Type:      classifyError(err),
 	}
-	
+
 	appErr.Retryable = isRetryable(appErr.Type, err)
 	return appErr
 }
@@ -97,22 +100,22 @@ func IsNetwork(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	var netErr net.Error
 	if errors.As(err, &netErr) {
 		return true
 	}
-	
+
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
 		return true
 	}
-	
+
 	var dnsErr *net.DNSError
 	if errors.As(err, &dnsErr) {
 		return true
 	}
-	
+
 	var syscallErr *syscall.Errno
 	if errors.As(err, &syscallErr) {
 		switch *syscallErr {
@@ -120,7 +123,7 @@ func IsNetwork(err error) bool {
 			return true
 		}
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	networkKeywords := []string{
 		"connection refused",
@@ -131,13 +134,13 @@ func IsNetwork(err error) bool {
 		"timeout",
 		"temporary failure",
 	}
-	
+
 	for _, keyword := range networkKeywords {
 		if strings.Contains(errStr, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -145,7 +148,7 @@ func IsDatabase(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	dbKeywords := []string{
 		"database",
@@ -155,13 +158,13 @@ func IsDatabase(err error) bool {
 		"locked",
 		"busy",
 	}
-	
+
 	for _, keyword := range dbKeywords {
 		if strings.Contains(errStr, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -169,7 +172,7 @@ func IsDBBusy(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "database is locked") ||
 		strings.Contains(errStr, "database is busy")
@@ -179,7 +182,7 @@ func IsAI(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	aiKeywords := []string{
 		"gemini",
@@ -189,13 +192,13 @@ func IsAI(err error) bool {
 		"generate content",
 		"generative-ai",
 	}
-	
+
 	for _, keyword := range aiKeywords {
 		if strings.Contains(errStr, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -203,7 +206,7 @@ func IsTransientAI(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	transientKeywords := []string{
 		"rate limit",
@@ -213,13 +216,13 @@ func IsTransientAI(err error) bool {
 		"timeout",
 		"temporary",
 	}
-	
+
 	for _, keyword := range transientKeywords {
 		if strings.Contains(errStr, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -227,12 +230,12 @@ func IsValidation(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {
 		return true
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	validationKeywords := []string{
 		"invalid url",
@@ -240,13 +243,13 @@ func IsValidation(err error) bool {
 		"parse error",
 		"validation",
 	}
-	
+
 	for _, keyword := range validationKeywords {
 		if strings.Contains(errStr, keyword) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -254,7 +257,7 @@ func IsInvalidURL(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "invalid url")
 }
@@ -263,12 +266,12 @@ func IsTimeout(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
 		return true
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "timeout") ||
 		strings.Contains(errStr, "deadline exceeded")
@@ -278,7 +281,7 @@ func IsRateLimit(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "rate limit") ||
 		strings.Contains(errStr, "too many requests")
@@ -289,16 +292,16 @@ func IsRetryable(err error) bool {
 	if errors.As(err, &appErr) {
 		return appErr.Retryable
 	}
-	
-	return IsNetwork(err) || IsDBBusy(err) || IsTransientAI(err) || 
-		   IsTimeout(err) || IsRateLimit(err)
+
+	return IsNetwork(err) || IsDBBusy(err) || IsTransientAI(err) ||
+		IsTimeout(err) || IsRateLimit(err)
 }
 
 func GetUserFriendlyMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	
+
 	var appErr *AppError
 	if errors.As(err, &appErr) {
 		switch appErr.Type {
@@ -330,6 +333,6 @@ func GetUserFriendlyMessage(err error) string {
 			return fmt.Sprintf("An error occurred: %v", appErr.Err)
 		}
 	}
-	
+
 	return fmt.Sprintf("An unexpected error occurred: %v", err)
 }

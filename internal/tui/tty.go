@@ -14,10 +14,10 @@ func ShouldUseTUI() bool {
 	if os.Getenv("CI") != "" {
 		return false
 	}
-	
+
 	if os.Getenv("TERM") == "dumb" {
 		return false
 	}
-	
+
 	return IsTTY()
 }

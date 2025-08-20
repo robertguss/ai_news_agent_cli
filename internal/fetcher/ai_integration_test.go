@@ -11,6 +11,7 @@ import (
 	"github.com/robertguss/ai-news-agent-cli/internal/ai/processor/mocks"
 	"github.com/robertguss/ai-news-agent-cli/internal/database"
 	"github.com/robertguss/ai-news-agent-cli/internal/scraper"
+	"github.com/robertguss/ai-news-agent-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestStoreArticlesWithAI_Success(t *testing.T) {
 
 	mockScraper := scraper.NewMockScraper("scraped article content", nil)
 	mockAI := new(mocks.AIProcessor)
-	mockAI.On("AnalyzeContent", "scraped article content").Return(&processor.AnalysisResult{
+	mockAI.On("AnalyzeContentWithRetry", mock.Anything, "scraped article content", mock.Anything).Return(&processor.AnalysisResult{
 		Summary: "AI generated summary",
 	}, nil)
 
@@ -40,6 +41,7 @@ func TestStoreArticlesWithAI_Success(t *testing.T) {
 		Scraper: mockScraper,
 		AI:      mockAI,
 		Queries: queries,
+		Config:  testutil.TestConfig(),
 	}
 
 	articles := []Article{
@@ -89,6 +91,7 @@ func TestStoreArticlesWithAI_ScraperError(t *testing.T) {
 		Scraper: mockScraper,
 		AI:      mockAI,
 		Queries: queries,
+		Config:  testutil.TestConfig(),
 	}
 
 	articles := []Article{
@@ -132,12 +135,13 @@ func TestStoreArticlesWithAI_AIError(t *testing.T) {
 
 	mockScraper := scraper.NewMockScraper("scraped content", nil)
 	mockAI := new(mocks.AIProcessor)
-	mockAI.On("AnalyzeContent", "scraped content").Return(nil, assert.AnError)
+	mockAI.On("AnalyzeContentWithRetry", mock.Anything, "scraped content", mock.Anything).Return(nil, assert.AnError)
 
 	deps := PipelineDeps{
 		Scraper: mockScraper,
 		AI:      mockAI,
 		Queries: queries,
+		Config:  testutil.TestConfig(),
 	}
 
 	articles := []Article{

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/robertguss/ai-news-agent-cli/internal/database"
+	"github.com/robertguss/ai-news-agent-cli/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
@@ -44,8 +45,9 @@ func TestStoreArticles_Success(t *testing.T) {
 		Priority: 1,
 	}
 
+	cfg := testutil.TestConfig()
 	ctx := context.Background()
-	stored, err := StoreArticles(ctx, queries, articles, source)
+	stored, err := StoreArticles(ctx, queries, articles, source, cfg)
 	require.NoError(t, err)
 	assert.Equal(t, 2, stored)
 
@@ -84,13 +86,14 @@ func TestStoreArticles_DuplicateHandling(t *testing.T) {
 		Priority: 1,
 	}
 
+	cfg := testutil.TestConfig()
 	ctx := context.Background()
 
-	stored1, err := StoreArticles(ctx, queries, articles, source)
+	stored1, err := StoreArticles(ctx, queries, articles, source, cfg)
 	require.NoError(t, err)
 	assert.Equal(t, 1, stored1)
 
-	stored2, err := StoreArticles(ctx, queries, articles, source)
+	stored2, err := StoreArticles(ctx, queries, articles, source, cfg)
 	require.NoError(t, err)
 	assert.Equal(t, 0, stored2)
 
@@ -117,8 +120,9 @@ func TestStoreArticles_EmptyList(t *testing.T) {
 		Priority: 1,
 	}
 
+	cfg := testutil.TestConfig()
 	ctx := context.Background()
-	stored, err := StoreArticles(ctx, queries, articles, source)
+	stored, err := StoreArticles(ctx, queries, articles, source, cfg)
 	require.NoError(t, err)
 	assert.Equal(t, 0, stored)
 }
@@ -159,8 +163,9 @@ func TestFetchAndStore_Integration(t *testing.T) {
 		Priority: 1,
 	}
 
+	cfg := testutil.TestConfig()
 	ctx := context.Background()
-	stored, err := FetchAndStore(ctx, queries, source)
+	stored, err := FetchAndStore(ctx, queries, source, cfg)
 	require.NoError(t, err)
 	assert.Equal(t, 1, stored)
 
@@ -174,18 +179,18 @@ func TestFetchAndStore_Integration(t *testing.T) {
 
 func createTestSchema(db *sql.DB) error {
 	schema := `CREATE TABLE IF NOT EXISTS articles (
-		id INTEGER PRIMARY KEY,
-		title TEXT,
-		url TEXT UNIQUE,
-		source_name TEXT,
-		published_date DATETIME,
-		summary TEXT,
-		entities JSON,
-		content_type TEXT,
-		topics JSON,
-		status TEXT DEFAULT 'unread',
-		story_group_id TEXT
-	);`
+                id INTEGER PRIMARY KEY,
+                title TEXT,
+                url TEXT UNIQUE,
+                source_name TEXT,
+                published_date DATETIME,
+                summary TEXT,
+                entities JSON,
+                content_type TEXT,
+                topics JSON,
+                status TEXT DEFAULT 'unread',
+                story_group_id TEXT
+        );`
 
 	_, err := db.Exec(schema)
 	return err

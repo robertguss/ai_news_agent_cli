@@ -20,145 +20,252 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 ## Features
 
 ### Current
-- ✅ Basic CLI scaffold with Cobra framework
-- ✅ Version information and help system
+- ✅ **Smart Fetching**: Automatically fetch content from configured RSS sources
+- ✅ **AI-Powered Processing**: Summarize articles using Google Gemini API
+- ✅ **Local Storage**: SQLite database for offline access and article management
+- ✅ **Terminal-Native Reading**: Beautiful markdown rendering for article content
+- ✅ **Article Management**: View, read, and open articles with intuitive commands
+- ✅ **Flexible Configuration**: YAML-based configuration with environment variable support
+- ✅ **Robust Error Handling**: Comprehensive retry logic and error management
+- ✅ **Testing**: Comprehensive test suite with mocks and integration tests
 
 ### Planned
-- 🔄 **Smart Fetching**: Automatically fetch content from curated AI news sources
-- 🔄 **AI-Powered Processing**: Summarize articles using OpenAI/Gemini APIs
 - 🔄 **Intelligent Deduplication**: Group duplicate stories from different sources
-- 🔄 **Priority-Based Sorting**: Tier-based source prioritization (Official blogs > Research > General tech media)
-- 🔄 **Terminal-Native Reading**: Beautiful markdown rendering with Glow
-- 🔄 **Local Storage**: SQLite database for offline access and read tracking
-- 🔄 **Flexible Filtering**: Filter by source, topic, content type, and read status
+- 🔄 **Priority-Based Sorting**: Enhanced tier-based source prioritization
+- 🔄 **Advanced Filtering**: Filter by source, topic, content type, and read status
+- 🔄 **OpenAI Integration**: Alternative AI processing option
 
 ## Quick Start
 
 ### Prerequisites
-- Go 1.25 or higher
-- OpenAI API key or Google Gemini API key
-- SQLite (for local storage)
+- Go 1.22 or higher
+- Google Gemini API key (get one at [Google AI Studio](https://aistudio.google.com/))
+- SQLite (included with most systems)
 
 ### Installation
 
 ```bash
-go install github.com/robertguss/ai-news-agent-cli@latest
+# Clone and build from source
+git clone https://github.com/robertguss/ai-news-agent-cli.git
+cd ai-news-agent-cli
+go build -o ai-news-agent-cli main.go
+```
+
+### Setup
+
+1. **Get your Gemini API key** from [Google AI Studio](https://aistudio.google.com/)
+
+2. **Set your API key**:
+```bash
+export GEMINI_API_KEY="your-gemini-api-key-here"
+```
+
+3. **Configure sources** (optional - default config included):
+```bash
+# Copy and customize the config file
+cp configs/config.yaml ~/.ainews/config.yaml
 ```
 
 ### Basic Usage
 
 ```bash
 # Display help
-ai-news-agent-cli --help
+./ai-news-agent-cli --help
 
 # Check version
-ai-news-agent-cli --version
+./ai-news-agent-cli --version
 
-# Current functionality
-ai-news-agent-cli
+# Fetch latest articles
+./ai-news-agent-cli fetch
+
+# View articles
+./ai-news-agent-cli view
+
+# Read a specific article
+./ai-news-agent-cli read 1
+
+# Open article in browser
+./ai-news-agent-cli open 1
 ```
 
 ## Usage
 
-### Planned Commands
+### Available Commands
 
-Once fully implemented, the CLI will support these workflows:
+The CLI supports the following commands:
 
 ```bash
-# Fetch and process new AI news
-ai-news-agent-cli fetch
+# Fetch and process new articles from configured sources
+./ai-news-agent-cli fetch
 
-# View unread news summaries
-ai-news-agent-cli view
+# View stored articles with AI-generated summaries
+./ai-news-agent-cli view
 
-# View all news (read and unread)
-ai-news-agent-cli view --all
+# Read full article content in terminal with markdown rendering
+./ai-news-agent-cli read <article-number>
 
-# Filter by specific criteria
-ai-news-agent-cli view --source "Google AI Blog"
-ai-news-agent-cli view --topic "Large Language Models"
-ai-news-agent-cli view --type "Research Paper"
+# Open article in your default browser
+./ai-news-agent-cli open <article-number>
 
-# Read full article in terminal
-ai-news-agent-cli read 3
+# Generate shell completion scripts
+./ai-news-agent-cli completion [bash|zsh|fish|powershell]
+```
 
-# Open article in browser
-ai-news-agent-cli open 3
+### Command Options
+
+```bash
+# Read command options
+./ai-news-agent-cli read 1 --no-cache    # Force fresh fetch
+./ai-news-agent-cli read 1 --no-style    # Plain text output
+
+# View command options (coming soon)
+./ai-news-agent-cli view --all           # Show read and unread
+./ai-news-agent-cli view --unread        # Show only unread
 ```
 
 ### Example Workflow
 
-1. **Fetch latest news**: `ai-news-agent-cli fetch`
-2. **Review summaries**: `ai-news-agent-cli view`
-3. **Read interesting articles**: `ai-news-agent-cli read 2`
-4. **Open complex content in browser**: `ai-news-agent-cli open 5`
+1. **Fetch latest articles**: `./ai-news-agent-cli fetch`
+2. **Review AI summaries**: `./ai-news-agent-cli view`
+3. **Read interesting articles**: `./ai-news-agent-cli read 2`
+4. **Open complex content in browser**: `./ai-news-agent-cli open 5`
 
 ## Configuration
 
-The application will use environment variables for configuration:
+The application uses a combination of configuration files and environment variables:
+
+### Environment Variables
 
 ```bash
-# Required: AI API credentials (choose one)
-export OPENAI_API_KEY="your-openai-api-key"
-export GEMINI_API_KEY="your-gemini-api-key"
+# Required: Gemini API key
+export GEMINI_API_KEY="your-gemini-api-key-here"
 
-# Optional: Database location
-export AI_NEWS_DB_PATH="$HOME/.ai-news-agent/news.db"
+# Optional: Override default timeouts and retry settings
+export NETWORK_TIMEOUT="30s"
+export MAX_RETRIES="3"
+export BACKOFF_BASE_MS="250"
+export BACKOFF_MAX_MS="2000"
+export DB_BUSY_RETRIES="3"
 
-# Optional: External tool configurations
-export JINA_READER_URL="https://r.jina.ai"
-export GLOW_STYLE="dark"
+# Optional: Custom log file location
+export LOG_FILE="$HOME/.ainews/agent.log"
 ```
+
+### Configuration File
+
+The application looks for `config.yaml` in the current directory or `./configs/` directory:
+
+```yaml
+# Database file location
+dsn: "./ai-news.db"
+
+# RSS sources to fetch from
+sources:
+  - name: "Hugging Face Blog"
+    url: "https://huggingface.co/blog/feed.xml"
+    type: "rss"
+    priority: 1
+  - name: "OpenAI Blog"
+    url: "https://openai.com/blog/rss.xml"
+    type: "rss"
+    priority: 1
+  - name: "Ars Technica AI"
+    url: "http://feeds.arstechnica.com/arstechnica/technology-lab"
+    type: "rss"
+    priority: 2
+
+# Optional: Override default settings
+network_timeout: "30s"
+max_retries: 3
+backoff_base_ms: 250
+backoff_max_ms: 2000
+db_busy_retries: 3
+log_file: "$HOME/.ainews/agent.log"
+```
+
+### Source Priority System
+
+- **Priority 1**: High-priority sources (official blogs, research institutions)
+- **Priority 2**: Medium-priority sources (tech news sites)
+- **Priority 3**: Lower-priority sources (general tech media)
 
 ## Project Structure
 
 ```
 ai-news-agent-cli/
-├── cmd/                    # CLI commands (Cobra)
-│   ├── root.go            # Root command and version
-│   └── root_test.go       # Command tests
-├── internal/              # Internal packages
-│   ├── database/          # SQLite operations (planned)
-│   ├── fetcher/           # Content fetching (planned)
-│   ├── processor/         # AI processing (planned)
-│   ├── scraper/           # Source scraping (planned)
-│   └── config/            # Configuration management (planned)
-├── docs/                  # Documentation and specifications
-├── main.go               # Application entry point
-├── go.mod                # Go module definition
-└── README.md             # This file
+├── cmd/                           # CLI commands (Cobra)
+│   ├── fetch.go                  # Fetch articles command
+│   ├── open.go                   # Open article in browser
+│   ├── read.go                   # Read article in terminal
+│   ├── root.go                   # Root command and version
+│   ├── view.go                   # View articles list
+│   └── *_test.go                 # Command tests
+├── internal/                      # Internal packages
+│   ├── ai/                       # AI processing
+│   │   └── processor/            # AI processor implementations
+│   ├── article/                  # Article operations
+│   ├── browserutil/              # Browser utilities
+│   ├── config/                   # Configuration management
+│   ├── database/                 # SQLite operations and schema
+│   ├── fetcher/                  # RSS content fetching
+│   ├── health/                   # Health check utilities
+│   ├── scraper/                  # Web content scraping
+│   ├── state/                    # Application state management
+│   ├── testutil/                 # Testing utilities
+│   └── tui/                      # Terminal UI components
+├── pkg/                          # Public packages
+│   ├── errs/                     # Error handling utilities
+│   ├── logging/                  # Logging utilities
+│   └── retry/                    # Retry logic utilities
+├── configs/                      # Configuration files
+│   └── config.yaml              # Default configuration
+├── docs/                         # Documentation and specifications
+├── main.go                      # Application entry point
+├── go.mod                       # Go module definition
+└── README.md                    # This file
 ```
 
 ## Roadmap
 
-### Phase 1: Core Infrastructure
-- [ ] SQLite database schema and operations
-- [ ] Configuration management system
-- [ ] Basic source definitions and management
+### ✅ Phase 1: Core Infrastructure (Complete)
+- ✅ SQLite database schema and operations
+- ✅ Configuration management system with YAML and environment variables
+- ✅ RSS source definitions and management
+- ✅ Comprehensive error handling and retry logic
+- ✅ Logging system with configurable output
 
-### Phase 2: Content Processing
-- [ ] Web scraping for various source types
-- [ ] Integration with Jina Reader for clean content extraction
-- [ ] OpenAI/Gemini API integration for summarization
-- [ ] Entity extraction (organizations, products, people)
+### ✅ Phase 2: Content Processing (Complete)
+- ✅ RSS feed scraping and parsing
+- ✅ Web content extraction and cleaning
+- ✅ Google Gemini API integration for AI summarization
+- ✅ Article storage and retrieval system
+- ✅ Content caching and offline access
 
-### Phase 3: Intelligence Features
-- [ ] Story deduplication and clustering
-- [ ] Source priority system implementation
-- [ ] Topic categorization and filtering
-- [ ] Read/unread status tracking
+### ✅ Phase 3: User Interface (Complete)
+- ✅ CLI commands for all core operations (fetch, view, read, open)
+- ✅ Terminal-based article reading with markdown rendering
+- ✅ Browser integration for complex content
+- ✅ Shell completion support
 
-### Phase 4: User Experience
-- [ ] Terminal UI improvements with Glow integration
-- [ ] Advanced filtering and search capabilities
-- [ ] Export functionality (JSON, markdown)
-- [ ] Automation support (cron-friendly)
+### 🔄 Phase 4: Intelligence Features (In Progress)
+- ✅ Basic source priority system
+- 🔄 Story deduplication and clustering
+- 🔄 Advanced topic categorization and filtering
+- 🔄 Enhanced read/unread status tracking
+- 🔄 Content similarity detection
+
+### 🔄 Phase 5: Enhanced User Experience (Planned)
+- 🔄 Advanced filtering and search capabilities
+- 🔄 Export functionality (JSON, markdown)
+- 🔄 Automation support (cron-friendly scheduling)
+- 🔄 Custom source management via CLI
+- 🔄 OpenAI integration as alternative AI provider
 
 ### Future Considerations
 - [ ] Integration with Discord/Slack for automated digests
-- [ ] Custom source management via CLI
 - [ ] Machine learning for personalized content ranking
 - [ ] Multi-language support
+- [ ] Web interface for remote access
 
 ## Contributing
 
@@ -183,14 +290,25 @@ cd ai-news-agent-cli
 # Install dependencies
 go mod download
 
+# Set up your Gemini API key
+export GEMINI_API_KEY="your-gemini-api-key-here"
+
 # Run tests
 go test ./...
+
+# Run tests with coverage
+go test -cover ./...
 
 # Build the application
 go build -o ai-news-agent-cli main.go
 
 # Run locally
-./ai-news-agent-cli
+./ai-news-agent-cli --help
+
+# Try the full workflow
+./ai-news-agent-cli fetch
+./ai-news-agent-cli view
+./ai-news-agent-cli read 1
 ```
 
 ### Code Style
@@ -218,4 +336,4 @@ This project builds upon excellent open-source tools and services:
 
 ---
 
-**Note**: This project is currently in early development. The CLI currently provides basic functionality while the full feature set is being implemented. Check the [roadmap](#roadmap) for planned features and development progress.
+**Note**: This project is production-ready for core AI news aggregation workflows. The CLI provides comprehensive functionality for fetching, processing, and reading AI news articles with intelligent summarization. Check the [roadmap](#roadmap) for upcoming enhancements and advanced features.
