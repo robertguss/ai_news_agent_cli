@@ -13,6 +13,8 @@ type ArticleRef struct {
         URL          string `json:"url"`
         Title        string `json:"title"`
         StoryGroupID string `json:"story_group_id"`
+        Content      string `json:"content,omitempty"`
+        ContentFetchedAt *time.Time `json:"content_fetched_at,omitempty"`
 }
 
 type ViewState struct {
