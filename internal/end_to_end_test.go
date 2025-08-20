@@ -107,7 +107,7 @@ func TestEndToEndConfigFetchStore(t *testing.T) {
 
 	totalStored := 0
 	for _, source := range cfg.Sources {
-		stored, err := fetcher.FetchAndStore(ctx, queries, source)
+		stored, err := fetcher.FetchAndStore(ctx, queries, source, cfg)
 		require.NoError(t, err)
 		totalStored += stored
 
@@ -134,7 +134,7 @@ func TestEndToEndConfigFetchStore(t *testing.T) {
 
 	secondRun := 0
 	for _, source := range cfg.Sources {
-		stored, err := fetcher.FetchAndStore(ctx, queries, source)
+		stored, err := fetcher.FetchAndStore(ctx, queries, source, cfg)
 		require.NoError(t, err)
 		secondRun += stored
 	}
@@ -148,18 +148,18 @@ func TestEndToEndConfigFetchStore(t *testing.T) {
 
 func createTestSchema(db *sql.DB) error {
 	schema := `CREATE TABLE IF NOT EXISTS articles (
-		id INTEGER PRIMARY KEY,
-		title TEXT,
-		url TEXT UNIQUE,
-		source_name TEXT,
-		published_date DATETIME,
-		summary TEXT,
-		entities JSON,
-		content_type TEXT,
-		topics JSON,
-		status TEXT DEFAULT 'unread',
-		story_group_id TEXT
-	);`
+                id INTEGER PRIMARY KEY,
+                title TEXT,
+                url TEXT UNIQUE,
+                source_name TEXT,
+                published_date DATETIME,
+                summary TEXT,
+                entities JSON,
+                content_type TEXT,
+                topics JSON,
+                status TEXT DEFAULT 'unread',
+                story_group_id TEXT
+        );`
 
 	_, err := db.Exec(schema)
 	return err

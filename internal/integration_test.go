@@ -73,7 +73,7 @@ func TestConfigAndFetcherIntegration(t *testing.T) {
 	assert.Equal(t, 1, source.Priority)
 
 	ctx := context.Background()
-	articles, err := fetcher.Fetch(ctx, source)
+	articles, err := fetcher.Fetch(ctx, source, cfg)
 	require.NoError(t, err)
 	require.Len(t, articles, 2)
 

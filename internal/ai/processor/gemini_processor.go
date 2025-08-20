@@ -1,47 +1,47 @@
 package processor
 
 import (
-        "context"
-        "crypto/sha256"
-        "encoding/json"
-        "errors"
-        "fmt"
-        "os"
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 
-        "github.com/google/generative-ai-go/genai"
-        "github.com/robertguss/ai-news-agent-cli/internal/config"
-        "github.com/robertguss/ai-news-agent-cli/pkg/errs"
-        "github.com/robertguss/ai-news-agent-cli/pkg/logging"
-        "github.com/robertguss/ai-news-agent-cli/pkg/retry"
-        "google.golang.org/api/option"
+	"github.com/google/generative-ai-go/genai"
+	"github.com/robertguss/ai-news-agent-cli/internal/config"
+	"github.com/robertguss/ai-news-agent-cli/pkg/errs"
+	"github.com/robertguss/ai-news-agent-cli/pkg/logging"
+	"github.com/robertguss/ai-news-agent-cli/pkg/retry"
+	"google.golang.org/api/option"
 )
 
 type GeminiProcessor struct {
-        client *genai.Client
+	client *genai.Client
 }
 
 func NewGeminiProcessor(ctx context.Context) (*GeminiProcessor, error) {
-        apiKey := os.Getenv("GEMINI_API_KEY")
-        if apiKey == "" {
-                return nil, errors.New("GEMINI_API_KEY environment variable is not set")
-        }
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return nil, errors.New("GEMINI_API_KEY environment variable is not set")
+	}
 
-        client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-        if err != nil {
-                return nil, fmt.Errorf("failed to create Gemini client: %w", err)
-        }
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Gemini client: %w", err)
+	}
 
-        return &GeminiProcessor{
-                client: client,
-        }, nil
+	return &GeminiProcessor{
+		client: client,
+	}, nil
 }
 
 func (gp *GeminiProcessor) AnalyzeContent(content string) (*AnalysisResult, error) {
-        ctx := context.Background()
-        
-        model := gp.client.GenerativeModel("gemini-pro")
-        
-        prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
+	ctx := context.Background()
+
+	model := gp.client.GenerativeModel("gemini-pro")
+
+	prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
 {
   "summary": "• Bullet point summary\n• Key points\n• Important details",
   "entities": {
@@ -57,64 +57,64 @@ func (gp *GeminiProcessor) AnalyzeContent(content string) (*AnalysisResult, erro
 Article content:
 %s`, content)
 
-        resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-        if err != nil {
-                return nil, fmt.Errorf("failed to generate content: %w", err)
-        }
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate content: %w", err)
+	}
 
-        if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-                return nil, errors.New("no response from Gemini API")
-        }
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return nil, errors.New("no response from Gemini API")
+	}
 
-        responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
 
-        var geminiResponse struct {
-                Summary      string   `json:"summary"`
-                Entities     Entities `json:"entities"`
-                Topics       []string `json:"topics"`
-                ContentType  string   `json:"content_type"`
-                StoryGroupID string   `json:"story_group_id"`
-        }
+	var geminiResponse struct {
+		Summary      string   `json:"summary"`
+		Entities     Entities `json:"entities"`
+		Topics       []string `json:"topics"`
+		ContentType  string   `json:"content_type"`
+		StoryGroupID string   `json:"story_group_id"`
+	}
 
-        if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
-                return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
-        }
+	if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
+	}
 
-        return &AnalysisResult{
-                Summary:      geminiResponse.Summary,
-                Entities:     geminiResponse.Entities,
-                Topics:       geminiResponse.Topics,
-                ContentType:  geminiResponse.ContentType,
-                StoryGroupID: generateStoryGroupID(content),
-        }, nil
+	return &AnalysisResult{
+		Summary:      geminiResponse.Summary,
+		Entities:     geminiResponse.Entities,
+		Topics:       geminiResponse.Topics,
+		ContentType:  geminiResponse.ContentType,
+		StoryGroupID: generateStoryGroupID(content),
+	}, nil
 }
 
 func (gp *GeminiProcessor) AnalyzeContentWithRetry(ctx context.Context, content string, cfg *config.Config) (*AnalysisResult, error) {
-        ctx, cancel := context.WithTimeout(ctx, cfg.NetworkTimeout)
-        defer cancel()
+	ctx, cancel := context.WithTimeout(ctx, cfg.NetworkTimeout)
+	defer cancel()
 
-        var result *AnalysisResult
-        err := retry.DoWithCallback(ctx, cfg.RetryConfig(), func() error {
-                var e error
-                result, e = gp.analyzeContentInternal(ctx, content)
-                return e
-        }, func(attempt int, err error) {
-                logging.Retry("ai_analysis", attempt, err)
-        })
+	var result *AnalysisResult
+	err := retry.DoWithCallback(ctx, cfg.RetryConfig(), func() error {
+		var e error
+		result, e = gp.analyzeContentInternal(ctx, content)
+		return e
+	}, func(attempt int, err error) {
+		logging.Retry("ai_analysis", attempt, err)
+	})
 
-        if err != nil {
-                wrappedErr := errs.Wrap("analyze content with gemini", err)
-                logging.Error("ai_analysis", wrappedErr)
-                return nil, wrappedErr
-        }
+	if err != nil {
+		wrappedErr := errs.Wrap("analyze content with gemini", err)
+		logging.Error("ai_analysis", wrappedErr)
+		return nil, wrappedErr
+	}
 
-        return result, nil
+	return result, nil
 }
 
 func (gp *GeminiProcessor) analyzeContentInternal(ctx context.Context, content string) (*AnalysisResult, error) {
-        model := gp.client.GenerativeModel("gemini-pro")
-        
-        prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
+	model := gp.client.GenerativeModel("gemini-pro")
+
+	prompt := fmt.Sprintf(`Analyze this AI news article and return a JSON response with the following structure:
 {
   "summary": "• Bullet point summary\n• Key points\n• Important details",
   "entities": {
@@ -130,39 +130,39 @@ func (gp *GeminiProcessor) analyzeContentInternal(ctx context.Context, content s
 Article content:
 %s`, content)
 
-        resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-        if err != nil {
-                return nil, fmt.Errorf("failed to generate content: %w", err)
-        }
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate content: %w", err)
+	}
 
-        if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-                return nil, errors.New("no response from Gemini API")
-        }
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return nil, errors.New("no response from Gemini API")
+	}
 
-        responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+	responseText := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
 
-        var geminiResponse struct {
-                Summary      string   `json:"summary"`
-                Entities     Entities `json:"entities"`
-                Topics       []string `json:"topics"`
-                ContentType  string   `json:"content_type"`
-                StoryGroupID string   `json:"story_group_id"`
-        }
+	var geminiResponse struct {
+		Summary      string   `json:"summary"`
+		Entities     Entities `json:"entities"`
+		Topics       []string `json:"topics"`
+		ContentType  string   `json:"content_type"`
+		StoryGroupID string   `json:"story_group_id"`
+	}
 
-        if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
-                return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
-        }
+	if err := json.Unmarshal([]byte(responseText), &geminiResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse Gemini response: %w", err)
+	}
 
-        return &AnalysisResult{
-                Summary:      geminiResponse.Summary,
-                Entities:     geminiResponse.Entities,
-                Topics:       geminiResponse.Topics,
-                ContentType:  geminiResponse.ContentType,
-                StoryGroupID: generateStoryGroupID(content),
-        }, nil
+	return &AnalysisResult{
+		Summary:      geminiResponse.Summary,
+		Entities:     geminiResponse.Entities,
+		Topics:       geminiResponse.Topics,
+		ContentType:  geminiResponse.ContentType,
+		StoryGroupID: generateStoryGroupID(content),
+	}, nil
 }
 
 func generateStoryGroupID(content string) string {
-        hash := sha256.Sum256([]byte(content))
-        return fmt.Sprintf("%x", hash)[:16]
+	hash := sha256.Sum256([]byte(content))
+	return fmt.Sprintf("%x", hash)[:16]
 }

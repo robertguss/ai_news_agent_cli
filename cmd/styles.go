@@ -40,13 +40,13 @@ var (
 
 func getSourceTier(sourceName string) int {
 	tierMap := map[string]int{
-		"Google AI Blog":   1,
-		"OpenAI Blog":      1,
+		"Google AI Blog":  1,
+		"OpenAI Blog":     1,
 		"Ars Technica AI": 2,
 		"The Verge":       2,
 		"Ars Technica":    2,
 	}
-	
+
 	if tier, exists := tierMap[sourceName]; exists {
 		return tier
 	}
@@ -55,15 +55,15 @@ func getSourceTier(sourceName string) int {
 
 func formatCard(index int, title, sourceName, summary, topics string, duplicates []string) string {
 	tier := getSourceTier(sourceName)
-	
+
 	var cardContent strings.Builder
-	
+
 	cardContent.WriteString(fmt.Sprintf("[%d] %s\n", index, titleStyle.Render(title)))
-	
+
 	sourceInfo := fmt.Sprintf("Source: %s (Tier %d)", sourceName, tier)
 	cardContent.WriteString(sourceStyle.Render(sourceInfo))
 	cardContent.WriteString("\n")
-	
+
 	if summary != "" {
 		cardContent.WriteString("Summary:\n")
 		bulletPoints := strings.Split(summary, ". ")
@@ -73,14 +73,14 @@ func formatCard(index int, title, sourceName, summary, topics string, duplicates
 			}
 		}
 	}
-	
+
 	if topics != "" {
 		cardContent.WriteString(fmt.Sprintf("Topics: %s\n", topicsStyle.Render(topics)))
 	}
-	
+
 	if len(duplicates) > 0 {
 		cardContent.WriteString(duplicatesStyle.Render(fmt.Sprintf("Also covered by: %s\n", strings.Join(duplicates, ", "))))
 	}
-	
+
 	return cardStyle.Render(cardContent.String())
 }
