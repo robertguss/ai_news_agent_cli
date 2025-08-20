@@ -156,3 +156,4 @@ tramp
 # Local configuration files
 config.local.*
 .env.local
+ai-news-agent

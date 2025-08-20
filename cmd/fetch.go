@@ -3,6 +3,7 @@ package cmd
 import (
         "context"
         "fmt"
+        "runtime"
 
         tea "github.com/charmbracelet/bubbletea"
         "github.com/robertguss/ai-news-agent-cli/internal/ai/processor"
@@ -33,6 +34,7 @@ var fetchCmd = &cobra.Command{
                 configPath, _ := cmd.Flags().GetString("config")
                 useMockAI, _ := cmd.Flags().GetBool("use-mock-ai")
                 plain, _ := cmd.Flags().GetBool("plain")
+                workers, _ := cmd.Flags().GetInt("workers")
 
                 cfg, err := loadCfg(configPath)
                 if err != nil {
@@ -66,62 +68,92 @@ var fetchCmd = &cobra.Command{
                 }
 
                 if !plain && tui.ShouldUseTUI() {
-                        return runInteractiveFetch(ctx, cfg, queries, aiProcessor)
+                        return runInteractiveFetch(ctx, cfg, queries, aiProcessor, workers)
                 }
 
                 return runPlainFetch(ctx, cmd, cfg, queries, aiProcessor)
         },
 }
 
-func runInteractiveFetch(ctx context.Context, cfg *config.Config, queries *database.Queries, aiProcessor processor.AIProcessor) error {
+func runInteractiveFetch(ctx context.Context, cfg *config.Config, queries *database.Queries, aiProcessor processor.AIProcessor, workers int) error {
+        if workers <= 0 {
+                workers = runtime.NumCPU()
+        }
+
         sourceNames := make([]string, len(cfg.Sources))
         for i, source := range cfg.Sources {
                 sourceNames[i] = source.Name
         }
 
         model := fetchui.New(sourceNames)
+        model.SetWorkerCount(workers)
         
         program := tea.NewProgram(model, tea.WithAltScreen())
         
+        progress := make(chan tui.ArticleProgressMsg, 100)
+        
         go func() {
-                var added int
+                for msg := range progress {
+                        program.Send(msg)
+                }
+        }()
+        
+        go func() {
+                defer close(progress)
+                
+                var totalAdded int
                 var errors []error
                 successCount := 0
                 errorCount := 0
 
-                for _, source := range cfg.Sources {
-                        program.Send(tui.ProgressMsg{
-                                Source: source.Name,
-                                Status: "Starting...",
-                        })
-
+                processSource := func(ctx context.Context, source fetcher.Source, progressCh chan<- tui.DetailedProgressMsg) (int, error) {
                         deps := fetcher.PipelineDeps{
                                 Scraper: scraper.NewJinaScraper(),
                                 AI:      aiProcessor,
                                 Queries: queries,
                         }
                         
-                        n, err := fetcher.FetchAndStoreWithAI(ctx, deps, source)
-                        if err != nil {
-                                errorCount++
-                                errors = append(errors, fmt.Errorf("source %s: %w", source.Name, err))
-                                program.Send(tui.CompletedMsg{
-                                        Source: source.Name,
-                                        Error:  err,
-                                })
-                                continue
+                        return fetcher.FetchAndStoreWithAIProgress(ctx, deps, source, progressCh)
+                }
+                
+                detailedProgress := make(chan tui.DetailedProgressMsg, 100)
+                
+                go func() {
+                        for msg := range detailedProgress {
+                                progress <- tui.ArticleProgressMsg{
+                                        Source:       msg.Source,
+                                        Phase:        msg.Phase,
+                                        Current:      msg.Current,
+                                        Total:        msg.Total,
+                                        ArticleTitle: msg.ArticleTitle,
+                                        Error:        msg.Error,
+                                }
                         }
-                        
-                        successCount++
-                        added += n
-                        program.Send(tui.CompletedMsg{
-                                Source: source.Name,
-                                Added:  n,
-                        })
+                }()
+                
+                results := fetcher.ProcessSourcesConcurrently(ctx, cfg.Sources, workers, processSource, detailedProgress)
+                close(detailedProgress)
+                
+                for _, result := range results {
+                        if result.Error != nil {
+                                errorCount++
+                                errors = append(errors, fmt.Errorf("source %s: %w", result.Source.Name, result.Error))
+                                program.Send(tui.CompletedMsg{
+                                        Source: result.Source.Name,
+                                        Error:  result.Error,
+                                })
+                        } else {
+                                successCount++
+                                totalAdded += result.Added
+                                program.Send(tui.CompletedMsg{
+                                        Source: result.Source.Name,
+                                        Added:  result.Added,
+                                })
+                        }
                 }
 
                 program.Send(tui.FinalSummaryMsg{
-                        TotalAdded:   added,
+                        TotalAdded:   totalAdded,
                         TotalSources: len(cfg.Sources),
                         SuccessCount: successCount,
                         ErrorCount:   errorCount,
@@ -169,5 +201,6 @@ func init() {
         fetchCmd.Flags().StringP("config", "c", "", "Path to config file")
         fetchCmd.Flags().Bool("use-mock-ai", false, "Use mock AI processor for testing")
         fetchCmd.Flags().Bool("plain", false, "Use plain text output instead of interactive TUI")
+        fetchCmd.Flags().IntP("workers", "w", 0, "Number of worker goroutines (0 = auto-detect based on CPU cores)")
         rootCmd.AddCommand(fetchCmd)
 }
