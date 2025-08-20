@@ -45,30 +45,33 @@ var fetchCmd = &cobra.Command{
                         return fmt.Errorf("init schema: %w", err)
                 }
 
+                var aiProcessor processor.AIProcessor
+                
+                if useMockAI {
+                        mockProcessor := new(mocks.AIProcessor)
+                        mockProcessor.On("AnalyzeContent", mock.Anything).Return(&processor.AnalysisResult{
+                                Summary: "mock summary",
+                        }, nil)
+                        aiProcessor = mockProcessor
+                } else {
+                        var err error
+                        aiProcessor, err = processor.NewGeminiProcessor(ctx)
+                        if err != nil {
+                                return fmt.Errorf("failed to initialize Gemini processor: %w", err)
+                        }
+                }
+
                 var added int
                 var errors []error
 
                 for _, source := range cfg.Sources {
-                        var n int
-                        var err error
-                        
-                        if useMockAI {
-                                mockProcessor := new(mocks.AIProcessor)
-                                mockProcessor.On("AnalyzeContent", mock.Anything).Return(&processor.AnalysisResult{
-                                        Summary: "mock summary",
-                                }, nil)
-                                
-                                deps := fetcher.PipelineDeps{
-                                        Scraper: scraper.NewMockScraper("scraped content", nil),
-                                        AI:      mockProcessor,
-                                        Queries: queries,
-                                }
-                                
-                                n, err = fetcher.FetchAndStoreWithAI(ctx, deps, source)
-                        } else {
-                                n, err = fetchAnd(ctx, queries, source)
+                        deps := fetcher.PipelineDeps{
+                                Scraper: scraper.NewJinaScraper(),
+                                AI:      aiProcessor,
+                                Queries: queries,
                         }
                         
+                        n, err := fetcher.FetchAndStoreWithAI(ctx, deps, source)
                         if err != nil {
                                 errors = append(errors, fmt.Errorf("source %s: %w", source.Name, err))
                                 continue

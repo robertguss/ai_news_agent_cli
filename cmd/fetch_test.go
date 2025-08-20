@@ -61,7 +61,7 @@ sources:
         cmd.AddCommand(fetchCmd)
         buf := new(bytes.Buffer)
         cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath})
+        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
         err = cmd.Execute()
         assert.NoError(t, err)
@@ -80,7 +80,7 @@ sources:
         assert.Equal(t, 2, count)
 
         buf.Reset()
-        cmd.SetArgs([]string{"fetch", "--config", configPath})
+        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
         err = cmd.Execute()
         assert.NoError(t, err)
 
@@ -112,7 +112,7 @@ sources:
         cmd.AddCommand(fetchCmd)
         buf := new(bytes.Buffer)
         cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath})
+        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
         err = cmd.Execute()
         assert.NoError(t, err)
@@ -164,7 +164,7 @@ sources:
         cmd.AddCommand(fetchCmd)
         buf := new(bytes.Buffer)
         cmd.SetOut(buf)
-        cmd.SetArgs([]string{"fetch", "--config", configPath})
+        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
 
         err = cmd.Execute()
         assert.NoError(t, err)
@@ -242,4 +242,100 @@ sources:
         require.NoError(t, err)
         assert.True(t, summary.Valid)
         assert.Equal(t, "mock summary", summary.String)
+}
+
+func TestFetchCmd_FailsWhenNoGeminiAPIKey(t *testing.T) {
+        // Use t.Setenv to safely unset the environment variable for this test
+        t.Setenv("GEMINI_API_KEY", "")
+        
+        // Verify the environment variable is actually unset
+        apiKey := os.Getenv("GEMINI_API_KEY")
+        require.Empty(t, apiKey, "GEMINI_API_KEY should be unset for this test")
+
+        tmpDir := t.TempDir()
+        dbPath := filepath.Join(tmpDir, "test.db")
+        configPath := filepath.Join(tmpDir, "config.yaml")
+
+        configContent := `dsn: "` + dbPath + `"
+sources:
+  - name: "Test Source"
+    url: "http://example.com/feed.xml"
+    type: "rss"
+    priority: 1`
+
+        writeErr := os.WriteFile(configPath, []byte(configContent), 0644)
+        require.NoError(t, writeErr)
+
+        cmd := NewRootCmd()
+        cmd.AddCommand(fetchCmd)
+        buf := new(bytes.Buffer)
+        cmd.SetOut(buf)
+        cmd.SetArgs([]string{"fetch", "--config", configPath})
+
+        err := cmd.Execute()
+        require.Error(t, err, "Command should fail when GEMINI_API_KEY is not set")
+        assert.Contains(t, err.Error(), "GEMINI_API_KEY")
+}
+
+func TestFetchCmd_ContinuesOnPartialAIFailures(t *testing.T) {
+        rssContent := `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Test Feed</title>
+        <item>
+            <title>Test Article 1</title>
+            <link>https://example.com/article1</link>
+            <pubDate>Wed, 13 Aug 2025 20:28:20 +0000</pubDate>
+            <description>First test article</description>
+        </item>
+        <item>
+            <title>Test Article 2</title>
+            <link>https://example.com/article2</link>
+            <pubDate>Tue, 12 Aug 2025 15:30:00 +0000</pubDate>
+            <description>Second test article</description>
+        </item>
+    </channel>
+</rss>`
+
+        server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/rss+xml")
+                w.WriteHeader(http.StatusOK)
+                w.Write([]byte(rssContent))
+        }))
+        defer server.Close()
+
+        tmpDir := t.TempDir()
+        dbPath := filepath.Join(tmpDir, "test.db")
+        configPath := filepath.Join(tmpDir, "config.yaml")
+
+        configContent := `dsn: "` + dbPath + `"
+sources:
+  - name: "Test Source"
+    url: "` + server.URL + `"
+    type: "rss"
+    priority: 1`
+
+        err := os.WriteFile(configPath, []byte(configContent), 0644)
+        require.NoError(t, err)
+
+        cmd := NewRootCmd()
+        cmd.AddCommand(fetchCmd)
+        buf := new(bytes.Buffer)
+        cmd.SetOut(buf)
+        cmd.SetArgs([]string{"fetch", "--config", configPath, "--use-mock-ai"})
+
+        err = cmd.Execute()
+        assert.NoError(t, err)
+
+        output := buf.String()
+        assert.Contains(t, output, "Added 2 new articles")
+
+        db, err := sql.Open("sqlite", dbPath)
+        require.NoError(t, err)
+        defer db.Close()
+
+        var count int
+        err = db.QueryRow("SELECT COUNT(*) FROM articles WHERE summary IS NOT NULL").Scan(&count)
+        require.NoError(t, err)
+        assert.Equal(t, 2, count)
 }
