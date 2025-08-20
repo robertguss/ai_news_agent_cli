@@ -7,11 +7,22 @@ import (
         "fmt"
         "strings"
 
+        tea "github.com/charmbracelet/bubbletea"
         "github.com/robertguss/ai-news-agent-cli/internal/database"
+        "github.com/robertguss/ai-news-agent-cli/internal/tui"
+        "github.com/robertguss/ai-news-agent-cli/internal/tui/viewui"
         "github.com/spf13/cobra"
 )
 
+type ViewOptions struct {
+        All    bool
+        Source string
+        Topic  string
+}
+
 var databaseOpen = database.Open
+var shouldUseTUIFunc = tui.ShouldUseTUI
+var runTUIViewFunc = runTUIView
 
 var viewCmd = &cobra.Command{
         Use:   "view",
@@ -22,61 +33,138 @@ var viewCmd = &cobra.Command{
                 source, _ := cmd.Flags().GetString("source")
                 topic, _ := cmd.Flags().GetString("topic")
 
-                db, q, err := databaseOpen(dbPath)
-                if err != nil {
-                        return err
-                }
-                defer db.Close()
-
-                err = database.InitSchema(db)
-                if err != nil {
-                        return err
+                opts := ViewOptions{
+                        All:    all,
+                        Source: source,
+                        Topic:  topic,
                 }
 
-                ctx := context.Background()
-                articles, err := getFilteredArticles(ctx, q, all, source, topic)
-                if err != nil {
-                        return err
+                if shouldUseTUIFunc() {
+                        return runTUIViewFunc(dbPath, opts)
                 }
 
-                if len(articles) == 0 {
-                        fmt.Fprintln(cmd.OutOrStdout(), "No articles found.")
-                        return nil
-                }
+                return runLegacyView(cmd, dbPath, opts)
+        },
+}
 
-                groupedArticles := groupArticlesByStory(articles)
-                var articleIDs []int64
+func runTUIView(dbPath string, opts ViewOptions) error {
+        db, q, err := databaseOpen(dbPath)
+        if err != nil {
+                return err
+        }
+        defer db.Close()
 
-                for i, group := range groupedArticles {
-                        primary := group[0]
-                        var duplicates []string
-                        
-                        for _, dup := range group[1:] {
-                                duplicates = append(duplicates, formatNullString(dup.SourceName, "Unknown"))
-                        }
+        err = database.InitSchema(db)
+        if err != nil {
+                return err
+        }
 
-                        title := formatNullString(primary.Title, "(no title)")
-                        sourceName := formatNullString(primary.SourceName, "(no source)")
-                        summary := formatNullString(primary.Summary, "")
-                        topics := formatTopics(primary.Topics)
+        ctx := context.Background()
+        articles, err := getFilteredArticles(ctx, q, opts.All, opts.Source, opts.Topic)
+        if err != nil {
+                return err
+        }
 
-                        card := formatCard(i+1, title, sourceName, summary, topics, duplicates)
-                        fmt.Fprint(cmd.OutOrStdout(), card)
+        // Convert database articles to TUI articles
+        var tuiArticles []viewui.ArticleItem
+        for _, article := range articles {
+                tuiArticles = append(tuiArticles, viewui.ArticleItem{
+                        ID:      article.ID,
+                        Title:   formatNullString(article.Title, "(no title)"),
+                        Source:  formatNullString(article.SourceName, "(no source)"),
+                        Summary: formatNullString(article.Summary, "No summary available"),
+                        URL:     formatNullString(article.Url, ""),
+                        IsRead:  article.Status.String == "read",
+                })
+        }
 
-                        for _, article := range group {
-                                articleIDs = append(articleIDs, article.ID)
-                        }
-                }
-
-                if !all && len(articleIDs) > 0 {
-                        err = q.MarkArticlesAsRead(ctx, articleIDs)
+        model := viewui.New(tuiArticles)
+        
+        // Set up database callback functions
+        model.SetCallbacks(
+                func(id int64) error {
+                        return q.MarkArticleAsRead(ctx, id)
+                },
+                func(id int64) error {
+                        // Get current status
+                        article, err := q.GetArticle(ctx, id)
                         if err != nil {
                                 return err
                         }
+                        
+                        newStatus := "read"
+                        if article.Status.String == "read" {
+                                newStatus = "unread"
+                        }
+                        
+                        return q.UpdateArticleStatus(ctx, database.UpdateArticleStatusParams{
+                                ID:     id,
+                                Status: sql.NullString{String: newStatus, Valid: true},
+                        })
+                },
+        )
+        
+        p := tea.NewProgram(model, tea.WithAltScreen())
+        
+        _, err = p.Run()
+        return err
+}
+
+func runLegacyView(cmd *cobra.Command, dbPath string, opts ViewOptions) error {
+        db, q, err := databaseOpen(dbPath)
+        if err != nil {
+                return err
+        }
+        defer db.Close()
+
+        err = database.InitSchema(db)
+        if err != nil {
+                return err
+        }
+
+        ctx := context.Background()
+        articles, err := getFilteredArticles(ctx, q, opts.All, opts.Source, opts.Topic)
+        if err != nil {
+                return err
+        }
+
+        if len(articles) == 0 {
+                fmt.Fprintln(cmd.OutOrStdout(), "No articles found.")
+                return nil
+        }
+
+        groupedArticles := groupArticlesByStory(articles)
+        var articleIDs []int64
+
+        for i, group := range groupedArticles {
+                primary := group[0]
+                var duplicates []string
+                
+                for _, dup := range group[1:] {
+                        duplicates = append(duplicates, formatNullString(dup.SourceName, "Unknown"))
                 }
 
-                return nil
-        },
+                title := formatNullString(primary.Title, "(no title)")
+                sourceName := formatNullString(primary.SourceName, "(no source)")
+                summary := formatNullString(primary.Summary, "")
+                topics := formatTopics(primary.Topics)
+
+                card := formatCard(i+1, title, sourceName, summary, topics, duplicates)
+                fmt.Fprint(cmd.OutOrStdout(), card)
+
+                for _, article := range group {
+                        articleIDs = append(articleIDs, article.ID)
+                }
+        }
+
+        if !opts.All && len(articleIDs) > 0 {
+                err = q.MarkArticlesAsRead(ctx, articleIDs)
+                if err != nil {
+                        return err
+                }
+        }
+
+        return nil
 }
 
 func formatNullString(ns sql.NullString, placeholder string) string {
