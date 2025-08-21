@@ -38,7 +38,7 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 ## Quick Start
 
 ### Prerequisites
-- Go 1.22 or higher
+- Go 1.25 or higher
 - Google Gemini API key (get one at [Google AI Studio](https://aistudio.google.com/))
 - SQLite (included with most systems)
 
@@ -48,7 +48,8 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 # Clone and build from source
 git clone https://github.com/robertguss/ai-news-agent-cli.git
 cd ai-news-agent-cli
-go build -o ai-news-agent-cli main.go
+just build
+# or alternatively: go build -o bin/ai-news-agent-cli .
 ```
 
 ### Setup
@@ -70,28 +71,28 @@ cp configs/config.yaml ~/.ainews/config.yaml
 
 ```bash
 # Display help
-./ai-news-agent-cli --help
+./bin/ai-news-agent-cli --help
 
 # Check version
-./ai-news-agent-cli --version
+./bin/ai-news-agent-cli --version
 
 # Fetch latest articles (default: 5 per source)
-./ai-news-agent-cli fetch
+./bin/ai-news-agent-cli fetch
 
 # Fetch more articles per source
-./ai-news-agent-cli fetch -n 10
+./bin/ai-news-agent-cli fetch -n 10
 
 # Fetch unlimited articles (legacy behavior)
-./ai-news-agent-cli fetch -n 0
+./bin/ai-news-agent-cli fetch -n 0
 
 # View articles
-./ai-news-agent-cli view
+./bin/ai-news-agent-cli view
 
 # Read a specific article
-./ai-news-agent-cli read 1
+./bin/ai-news-agent-cli read 1
 
 # Open article in browser
-./ai-news-agent-cli open 1
+./bin/ai-news-agent-cli open 1
 ```
 
 ## Usage
@@ -102,56 +103,56 @@ The CLI supports the following commands:
 
 ```bash
 # Fetch and process new articles from configured sources
-./ai-news-agent-cli fetch
+./bin/ai-news-agent-cli fetch
 
 # Fetch with custom article limit per source
-./ai-news-agent-cli fetch -n 10        # Max 10 articles per source
-./ai-news-agent-cli fetch --limit 3    # Max 3 articles per source
+./bin/ai-news-agent-cli fetch -n 10        # Max 10 articles per source
+./bin/ai-news-agent-cli fetch --limit 3    # Max 3 articles per source
 
 # View stored articles with AI-generated summaries
-./ai-news-agent-cli view
+./bin/ai-news-agent-cli view
 
 # Read full article content in terminal with markdown rendering
-./ai-news-agent-cli read <article-number>
+./bin/ai-news-agent-cli read <article-number>
 
 # Open article in your default browser
-./ai-news-agent-cli open <article-number>
+./bin/ai-news-agent-cli open <article-number>
 
 # Generate shell completion scripts
-./ai-news-agent-cli completion [bash|zsh|fish|powershell]
+./bin/ai-news-agent-cli completion [bash|zsh|fish|powershell]
 ```
 
 ### Command Options
 
 ```bash
 # Fetch command options
-./ai-news-agent-cli fetch -n 5           # Limit to 5 articles per source (default)
-./ai-news-agent-cli fetch --limit 10     # Limit to 10 articles per source
-./ai-news-agent-cli fetch -n 0           # Unlimited articles (legacy behavior)
+./bin/ai-news-agent-cli fetch -n 5           # Limit to 5 articles per source (default)
+./bin/ai-news-agent-cli fetch --limit 10     # Limit to 10 articles per source
+./bin/ai-news-agent-cli fetch -n 0           # Unlimited articles (legacy behavior)
 
 # Read command options
-./ai-news-agent-cli read 1 --no-cache    # Force fresh fetch
-./ai-news-agent-cli read 1 --no-style    # Plain text output
+./bin/ai-news-agent-cli read 1 --no-cache    # Force fresh fetch
+./bin/ai-news-agent-cli read 1 --no-style    # Plain text output
 
 # View command options (coming soon)
-./ai-news-agent-cli view --all           # Show read and unread
-./ai-news-agent-cli view --unread        # Show only unread
+./bin/ai-news-agent-cli view --all           # Show read and unread
+./bin/ai-news-agent-cli view --unread        # Show only unread
 ```
 
 ### Example Workflow
 
-1. **Fetch latest articles**: `./ai-news-agent-cli fetch` (gets 5 newest per source by default)
-2. **Review AI summaries**: `./ai-news-agent-cli view`
-3. **Read interesting articles**: `./ai-news-agent-cli read 2`
-4. **Open complex content in browser**: `./ai-news-agent-cli open 5`
+1. **Fetch latest articles**: `./bin/ai-news-agent-cli fetch` (gets 5 newest per source by default)
+2. **Review AI summaries**: `./bin/ai-news-agent-cli view`
+3. **Read interesting articles**: `./bin/ai-news-agent-cli read 2`
+4. **Open complex content in browser**: `./bin/ai-news-agent-cli open 5`
 
 ### Article Limiting
 
 By default, the fetch command retrieves the **5 most recent articles** from each RSS source to focus on current news. This provides faster fetching and more relevant content compared to processing entire RSS feeds.
 
-- **Default behavior**: `./ai-news-agent-cli fetch` (5 articles per source)
-- **Custom limit**: `./ai-news-agent-cli fetch -n 10` (10 articles per source)  
-- **Legacy unlimited**: `./ai-news-agent-cli fetch -n 0` (all articles, slower)
+- **Default behavior**: `./bin/ai-news-agent-cli fetch` (5 articles per source)
+- **Custom limit**: `./bin/ai-news-agent-cli fetch -n 10` (10 articles per source)  
+- **Legacy unlimited**: `./bin/ai-news-agent-cli fetch -n 0` (all articles, slower)
 
 Articles are sorted by publish date (newest first) before applying the limit.
 
@@ -271,12 +272,15 @@ ai-news-agent-cli/
 - ✅ Terminal-based article reading with markdown rendering
 - ✅ Browser integration for complex content
 - ✅ Shell completion support
+- ✅ Interactive TUI for article viewing with filtering and search
+- ✅ Source grouping in terminal UI for better organization
 
 ### 🔄 Phase 4: Intelligence Features (In Progress)
 - ✅ Basic source priority system
-- 🔄 Story deduplication and clustering
+- ✅ Story grouping infrastructure (database schema)
+- 🔄 Story deduplication and clustering implementation
 - 🔄 Advanced topic categorization and filtering
-- 🔄 Enhanced read/unread status tracking
+- ✅ Read/unread status tracking
 - 🔄 Content similarity detection
 
 ### 🔄 Phase 5: Enhanced User Experience (Planned)
@@ -325,15 +329,16 @@ go test ./...
 go test -cover ./...
 
 # Build the application
-go build -o ai-news-agent-cli main.go
+just build
+# or: go build -o bin/ai-news-agent-cli .
 
 # Run locally
-./ai-news-agent-cli --help
+./bin/ai-news-agent-cli --help
 
 # Try the full workflow
-./ai-news-agent-cli fetch
-./ai-news-agent-cli view
-./ai-news-agent-cli read 1
+./bin/ai-news-agent-cli fetch
+./bin/ai-news-agent-cli view
+./bin/ai-news-agent-cli read 1
 ```
 
 ### Code Style
