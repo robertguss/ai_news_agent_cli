@@ -420,12 +420,12 @@ func (m Model) renderPreview(width int) string {
         // Title
         b.WriteString(lipgloss.NewStyle().Bold(true).Render(article.Title) + "\n\n")
 
-        // Source and status
+        // Status
         status := "Unread"
         if article.IsRead {
                 status = "Read"
         }
-        b.WriteString(fmt.Sprintf("Source: %s • Status: %s\n\n", article.Source, status))
+        b.WriteString(fmt.Sprintf("Status: %s\n\n", status))
 
         // Summary
         b.WriteString("Summary:\n")
@@ -706,8 +706,6 @@ func (m Model) renderArticleView() string {
         // Article header
         header := fmt.Sprintf("📖 %s", selectedArticle.Title)
         fullContent.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
-        fullContent.WriteString("\n")
-        fullContent.WriteString(fmt.Sprintf("Source: %s", selectedArticle.Source))
         fullContent.WriteString("\n\n")
         
         // Error or content
