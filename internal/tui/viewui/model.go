@@ -1,772 +1,770 @@
 package viewui
 
 import (
-        "fmt"
-        "os/exec"
-        "runtime"
-        "sort"
-        "strings"
+	"fmt"
+	"os/exec"
+	"runtime"
+	"sort"
+	"strings"
 
-        "github.com/charmbracelet/bubbles/textinput"
-        tea "github.com/charmbracelet/bubbletea"
-        "github.com/charmbracelet/lipgloss"
-        "github.com/robertguss/rss-agent-cli/internal/article"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/robertguss/rss-agent-cli/internal/article"
 )
 
 type ArticleItem struct {
-        ID      int64
-        Title   string
-        Source  string
-        Summary string
-        URL     string
-        IsRead  bool
-        Content string
+	ID      int64
+	Title   string
+	Source  string
+	Summary string
+	URL     string
+	IsRead  bool
+	Content string
 }
 
 type FilterMode int
 
 const (
-        FilterNone FilterMode = iota
-        FilterSearch
-        FilterSource
-        FilterReadStatus
+	FilterNone FilterMode = iota
+	FilterSearch
+	FilterSource
+	FilterReadStatus
 )
 
 type ViewMode int
 
 const (
-        ViewModeList ViewMode = iota
-        ViewModeArticle
+	ViewModeList ViewMode = iota
+	ViewModeArticle
 )
 
 type ReadStatusFilter int
 
 const (
-        ShowAll ReadStatusFilter = iota
-        ShowUnread
-        ShowRead
+	ShowAll ReadStatusFilter = iota
+	ShowUnread
+	ShowRead
 )
 
 type Model struct {
-        articles         []ArticleItem
-        filteredArticles []ArticleItem
-        selectedIndex    int
-        width            int
-        height           int
-        markReadFunc     func(int64) error
-        toggleReadFunc   func(int64) error
+	articles         []ArticleItem
+	filteredArticles []ArticleItem
+	selectedIndex    int
+	width            int
+	height           int
+	markReadFunc     func(int64) error
+	toggleReadFunc   func(int64) error
 
-        // Filtering
-        filterMode       FilterMode
-        searchInput      textinput.Model
-        sourceFilter     string
-        availableSources []string
-        sourceIndex      int
-        readStatusFilter ReadStatusFilter
+	// Filtering
+	filterMode       FilterMode
+	searchInput      textinput.Model
+	sourceFilter     string
+	availableSources []string
+	sourceIndex      int
+	readStatusFilter ReadStatusFilter
 
-        // Article viewing
-        viewMode        ViewMode
-        articleContent  string
-        loadingError    string
-        scrollOffset    int
+	// Article viewing
+	viewMode       ViewMode
+	articleContent string
+	loadingError   string
+	scrollOffset   int
 }
 
 var (
-        selectedStyle = lipgloss.NewStyle().
-                        Background(lipgloss.Color("#874BFD")).
-                        Foreground(lipgloss.Color("#FFFFFF")).
-                        Bold(true)
+	selectedStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#874BFD")).
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Bold(true)
 
-        unreadStyle = lipgloss.NewStyle().
-                        Foreground(lipgloss.Color("#00FF87")).
-                        Bold(true)
+	unreadStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FF87")).
+			Bold(true)
 
-        readStyle = lipgloss.NewStyle().
-                        Foreground(lipgloss.Color("#7D7D7D"))
+	readStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D7D7D"))
 
-        previewStyle = lipgloss.NewStyle().
-                        Border(lipgloss.RoundedBorder()).
-                        BorderForeground(lipgloss.Color("#874BFD")).
-                        Padding(1).
-                        Height(10)
+	previewStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1).
+			Height(10)
 
-        helpStyle = lipgloss.NewStyle().
-                        Foreground(lipgloss.Color("#7D7D7D")).
-                        Italic(true)
+	helpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D7D7D")).
+			Italic(true)
 
-        headerStyle = lipgloss.NewStyle().
-                        Bold(true).
-                        Foreground(lipgloss.Color("#00D7FF")).
-                        MarginTop(1)
+	headerStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00D7FF")).
+			MarginTop(1)
 )
 
 func New(articles []ArticleItem) Model {
-        searchInput := textinput.New()
-        searchInput.Placeholder = "Search articles..."
-        searchInput.CharLimit = 50
+	searchInput := textinput.New()
+	searchInput.Placeholder = "Search articles..."
+	searchInput.CharLimit = 50
 
-        model := Model{
-                articles:         articles,
-                filteredArticles: articles,
-                selectedIndex:    0,
-                filterMode:       FilterNone,
-                searchInput:      searchInput,
-                readStatusFilter: ShowAll,
-        }
+	model := Model{
+		articles:         articles,
+		filteredArticles: articles,
+		selectedIndex:    0,
+		filterMode:       FilterNone,
+		searchInput:      searchInput,
+		readStatusFilter: ShowAll,
+	}
 
-        // Extract unique sources
-        sourceMap := make(map[string]bool)
-        for _, article := range articles {
-                sourceMap[article.Source] = true
-        }
+	// Extract unique sources
+	sourceMap := make(map[string]bool)
+	for _, article := range articles {
+		sourceMap[article.Source] = true
+	}
 
-        model.availableSources = []string{"All Sources"}
-        for source := range sourceMap {
-                model.availableSources = append(model.availableSources, source)
-        }
+	model.availableSources = []string{"All Sources"}
+	for source := range sourceMap {
+		model.availableSources = append(model.availableSources, source)
+	}
 
-        return model
+	return model
 }
 
 func (m *Model) SetCallbacks(markRead, toggleRead func(int64) error) {
-        m.markReadFunc = markRead
-        m.toggleReadFunc = toggleRead
+	m.markReadFunc = markRead
+	m.toggleReadFunc = toggleRead
 }
 
 func (m Model) Init() tea.Cmd {
-        return nil
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-        var cmd tea.Cmd
+	var cmd tea.Cmd
 
-        switch msg := msg.(type) {
-        case tea.WindowSizeMsg:
-                m.width = msg.Width
-                m.height = msg.Height
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 
+	case tea.KeyMsg:
+		// Handle article view mode specific keys
+		if m.viewMode == ViewModeArticle {
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			case "esc":
+				m.viewMode = ViewModeList
+				m.articleContent = ""
+				m.loadingError = ""
+				m.scrollOffset = 0
+			case "up", "k":
+				if m.scrollOffset > 0 {
+					m.scrollOffset--
+				}
+			case "down", "j":
+				m.scrollOffset++
+				// Bounds will be checked in renderArticleView
+			case "pgup":
+				m.scrollOffset -= 10
+				if m.scrollOffset < 0 {
+					m.scrollOffset = 0
+				}
+			case "pgdown":
+				m.scrollOffset += 10
+			case "home":
+				m.scrollOffset = 0
+			case "end":
+				// Set to a large number, will be clamped in renderArticleView
+				m.scrollOffset = 9999
+			}
+			return m, cmd
+			// Handle filter mode specific keys
+		} else if m.filterMode == FilterSearch {
+			switch msg.String() {
+			case "esc":
+				m.filterMode = FilterNone
+				m.searchInput.Blur()
+				m.applyFilters()
+			case "enter":
+				m.filterMode = FilterNone
+				m.searchInput.Blur()
+				m.applyFilters()
+			default:
+				m.searchInput, cmd = m.searchInput.Update(msg)
+				m.applyFilters()
+				return m, cmd
+			}
+		} else {
+			// Normal navigation and commands
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
 
-        case tea.KeyMsg:
-                // Handle article view mode specific keys
-                if m.viewMode == ViewModeArticle {
-                        switch msg.String() {
-                        case "q", "ctrl+c":
-                                return m, tea.Quit
-                        case "esc":
-                                m.viewMode = ViewModeList
-                                m.articleContent = ""
-                                m.loadingError = ""
-                                m.scrollOffset = 0
-                        case "up", "k":
-                                if m.scrollOffset > 0 {
-                                        m.scrollOffset--
-                                }
-                        case "down", "j":
-                                m.scrollOffset++
-                                // Bounds will be checked in renderArticleView
-                        case "pgup":
-                                m.scrollOffset -= 10
-                                if m.scrollOffset < 0 {
-                                        m.scrollOffset = 0
-                                }
-                        case "pgdown":
-                                m.scrollOffset += 10
-                        case "home":
-                                m.scrollOffset = 0
-                        case "end":
-                                // Set to a large number, will be clamped in renderArticleView
-                                m.scrollOffset = 9999
-                        }
-                        return m, cmd
-                // Handle filter mode specific keys
-                } else if m.filterMode == FilterSearch {
-                        switch msg.String() {
-                        case "esc":
-                                m.filterMode = FilterNone
-                                m.searchInput.Blur()
-                                m.applyFilters()
-                        case "enter":
-                                m.filterMode = FilterNone
-                                m.searchInput.Blur()
-                                m.applyFilters()
-                        default:
-                                m.searchInput, cmd = m.searchInput.Update(msg)
-                                m.applyFilters()
-                                return m, cmd
-                        }
-                } else {
-                        // Normal navigation and commands
-                        switch msg.String() {
-                        case "q", "ctrl+c":
-                                return m, tea.Quit
+			case "up", "k":
+				if m.selectedIndex > 0 {
+					m.selectedIndex--
+				}
 
-                        case "up", "k":
-                                if m.selectedIndex > 0 {
-                                        m.selectedIndex--
-                                }
+			case "down", "j":
+				if m.selectedIndex < len(m.filteredArticles)-1 {
+					m.selectedIndex++
+				}
 
-                        case "down", "j":
-                                if m.selectedIndex < len(m.filteredArticles)-1 {
-                                        m.selectedIndex++
-                                }
+			case "enter":
+				if len(m.filteredArticles) > 0 && m.markReadFunc != nil {
+					article := m.getSelectedArticle()
+					if article != nil && !article.IsRead {
+						err := m.markReadFunc(article.ID)
+						if err == nil {
+							article.IsRead = true
+							m.applyFilters()
+						}
+					}
+				}
 
-                        case "enter":
-                                if len(m.filteredArticles) > 0 && m.markReadFunc != nil {
-                                        article := m.getSelectedArticle()
-                                        if article != nil && !article.IsRead {
-                                                err := m.markReadFunc(article.ID)
-                                                if err == nil {
-                                                        article.IsRead = true
-                                                        m.applyFilters()
-                                                }
-                                        }
-                                }
+			case " ": // Space key
+				if len(m.filteredArticles) > 0 {
+					article := m.getSelectedArticle()
+					if article != nil {
+						if m.markReadFunc != nil && !article.IsRead {
+							err := m.markReadFunc(article.ID)
+							if err == nil {
+								article.IsRead = true
+								m.applyFilters()
+							}
+						}
+						// Open in browser
+						go func() { _ = openBrowser(article.URL) }()
+					}
+				}
 
-                        case " ": // Space key
-                                if len(m.filteredArticles) > 0 {
-                                        article := m.getSelectedArticle()
-                                        if article != nil {
-                                                if m.markReadFunc != nil && !article.IsRead {
-                                                        err := m.markReadFunc(article.ID)
-                                                        if err == nil {
-                                                                article.IsRead = true
-                                                                m.applyFilters()
-                                                        }
-                                                }
-                                                // Open in browser
-                                                go func() { _ = openBrowser(article.URL) }()
-                                        }
-                                }
+			case "r":
+				if len(m.filteredArticles) > 0 && m.toggleReadFunc != nil {
+					article := m.getSelectedArticle()
+					if article != nil {
+						err := m.toggleReadFunc(article.ID)
+						if err == nil {
+							article.IsRead = !article.IsRead
+							m.applyFilters()
+						}
+					}
+				}
 
-                        case "r":
-                                if len(m.filteredArticles) > 0 && m.toggleReadFunc != nil {
-                                        article := m.getSelectedArticle()
-                                        if article != nil {
-                                                err := m.toggleReadFunc(article.ID)
-                                                if err == nil {
-                                                        article.IsRead = !article.IsRead
-                                                        m.applyFilters()
-                                                }
-                                        }
-                                }
+			case "v":
+				if len(m.filteredArticles) > 0 {
+					article := m.getSelectedArticle()
+					if article != nil {
+						m.viewMode = ViewModeArticle
+						m.loadingError = ""
+						m.scrollOffset = 0
 
-                        case "v":
-                                if len(m.filteredArticles) > 0 {
-                                        article := m.getSelectedArticle()
-                                        if article != nil {
-                                                m.viewMode = ViewModeArticle
-                                                m.loadingError = ""
-                                                m.scrollOffset = 0
-                                                
-                                                if article.Content != "" {
-                                                        // Remove content length limit now that we have scrolling
-                                                        m.articleContent = article.Content
-                                                } else {
-                                                        m.articleContent = ""
-                                                        m.loadingError = fmt.Sprintf("No content available for this article (content length: %d)", len(article.Content))
-                                                }
-                                        }
-                                }
+						if article.Content != "" {
+							// Remove content length limit now that we have scrolling
+							m.articleContent = article.Content
+						} else {
+							m.articleContent = ""
+							m.loadingError = fmt.Sprintf("No content available for this article (content length: %d)", len(article.Content))
+						}
+					}
+				}
 
-                        case "/":
-                                m.filterMode = FilterSearch
-                                m.searchInput.Focus()
-                                return m, textinput.Blink
+			case "/":
+				m.filterMode = FilterSearch
+				m.searchInput.Focus()
+				return m, textinput.Blink
 
-                        case "s":
-                                m.cycleSourceFilter()
-                                m.applyFilters()
+			case "s":
+				m.cycleSourceFilter()
+				m.applyFilters()
 
-                        case "f":
-                                m.cycleReadStatusFilter()
-                                m.applyFilters()
+			case "f":
+				m.cycleReadStatusFilter()
+				m.applyFilters()
 
-                        case "esc":
-                                m.clearFilters()
-                                m.applyFilters()
-                        }
-                }
-        }
-        return m, cmd
+			case "esc":
+				m.clearFilters()
+				m.applyFilters()
+			}
+		}
+	}
+	return m, cmd
 }
 
 func (m Model) View() string {
-        if len(m.articles) == 0 {
-                return "No articles found.\n\nPress 'q' to quit"
-        }
+	if len(m.articles) == 0 {
+		return "No articles found.\n\nPress 'q' to quit"
+	}
 
-        // Handle article view mode
-        if m.viewMode == ViewModeArticle {
-                return m.renderArticleView()
-        }
+	// Handle article view mode
+	if m.viewMode == ViewModeArticle {
+		return m.renderArticleView()
+	}
 
-        // Show search input if in search mode
-        if m.filterMode == FilterSearch {
-                searchView := lipgloss.NewStyle().
-                        Border(lipgloss.RoundedBorder()).
-                        BorderForeground(lipgloss.Color("#874BFD")).
-                        Padding(0, 1).
-                        Render("Search: " + m.searchInput.View())
+	// Show search input if in search mode
+	if m.filterMode == FilterSearch {
+		searchView := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(0, 1).
+			Render("Search: " + m.searchInput.View())
 
-                return searchView + "\n\nPress Enter to apply, Esc to cancel"
-        }
+		return searchView + "\n\nPress Enter to apply, Esc to cancel"
+	}
 
-        if len(m.filteredArticles) == 0 {
-                return "No articles match current filters.\n\nPress 'esc' to clear filters, 'q' to quit"
-        }
+	if len(m.filteredArticles) == 0 {
+		return "No articles match current filters.\n\nPress 'esc' to clear filters, 'q' to quit"
+	}
 
-        // Calculate layout dimensions (50/50 split)
-        listWidth := m.width / 2
-        previewWidth := m.width - listWidth - 2 // Account for border
+	// Calculate layout dimensions (50/50 split)
+	listWidth := m.width / 2
+	previewWidth := m.width - listWidth - 2 // Account for border
 
-        if listWidth < 20 {
-                listWidth = 20
-        }
-        if previewWidth < 20 {
-                previewWidth = 20
-        }
+	if listWidth < 20 {
+		listWidth = 20
+	}
+	if previewWidth < 20 {
+		previewWidth = 20
+	}
 
-        // Build article list (left pane)
-        listPane := m.renderArticleList(listWidth)
+	// Build article list (left pane)
+	listPane := m.renderArticleList(listWidth)
 
-        // Build preview pane (right pane)
-        previewPane := m.renderPreview(previewWidth)
+	// Build preview pane (right pane)
+	previewPane := m.renderPreview(previewWidth)
 
-        // Combine panes side by side
-        return lipgloss.JoinHorizontal(lipgloss.Top, listPane, previewPane)
+	// Combine panes side by side
+	return lipgloss.JoinHorizontal(lipgloss.Top, listPane, previewPane)
 }
 
 func (m Model) renderArticleList(width int) string {
-        var b strings.Builder
+	var b strings.Builder
 
-        // Title with filter info
-        title := fmt.Sprintf("Articles (%d/%d shown, %d unread)",
-                len(m.filteredArticles), len(m.articles), m.countUnread())
-        b.WriteString(lipgloss.NewStyle().Bold(true).Render(title) + "\n")
+	// Title with filter info
+	title := fmt.Sprintf("Articles (%d/%d shown, %d unread)",
+		len(m.filteredArticles), len(m.articles), m.countUnread())
+	b.WriteString(lipgloss.NewStyle().Bold(true).Render(title) + "\n")
 
-        // Filter status
-        filterInfo := m.getFilterInfo()
-        if filterInfo != "" {
-                b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00D7FF")).Render(filterInfo) + "\n")
-        }
-        b.WriteString("\n")
+	// Filter status
+	filterInfo := m.getFilterInfo()
+	if filterInfo != "" {
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00D7FF")).Render(filterInfo) + "\n")
+	}
+	b.WriteString("\n")
 
-        // Track previous source for grouping
-        prevSource := ""
-        showHeaders := m.shouldShowSourceHeaders()
+	// Track previous source for grouping
+	prevSource := ""
+	showHeaders := m.shouldShowSourceHeaders()
 
-        for i, article := range m.filteredArticles {
-                // Add source header when source changes
-                if showHeaders && article.Source != prevSource {
-                        sourceCount := m.countBySource(article.Source)
-                        header := fmt.Sprintf("%s (%d)", article.Source, sourceCount)
-                        b.WriteString(headerStyle.Render(header) + "\n")
-                        prevSource = article.Source
-                }
-                var style lipgloss.Style
-                prefix := "  "
+	for i, article := range m.filteredArticles {
+		// Add source header when source changes
+		if showHeaders && article.Source != prevSource {
+			sourceCount := m.countBySource(article.Source)
+			header := fmt.Sprintf("%s (%d)", article.Source, sourceCount)
+			b.WriteString(headerStyle.Render(header) + "\n")
+			prevSource = article.Source
+		}
+		var style lipgloss.Style
+		prefix := "  "
 
-                if i == m.selectedIndex {
-                        style = selectedStyle
-                        prefix = "> "
-                } else if article.IsRead {
-                        style = readStyle
-                } else {
-                        style = unreadStyle
-                        prefix = "● "
-                }
+		if i == m.selectedIndex {
+			style = selectedStyle
+			prefix = "> "
+		} else if article.IsRead {
+			style = readStyle
+		} else {
+			style = unreadStyle
+			prefix = "● "
+		}
 
-                status := ""
-                if article.IsRead {
-                        status = "[READ] "
-                } else {
-                        status = "[NEW] "
-                }
+		status := ""
+		if article.IsRead {
+			status = "[READ] "
+		} else {
+			status = "[NEW] "
+		}
 
-                line := fmt.Sprintf("%s%s%s", prefix, status, article.Title)
-                if len(line) > width-4 {
-                        line = line[:width-7] + "..."
-                }
+		line := fmt.Sprintf("%s%s%s", prefix, status, article.Title)
+		if len(line) > width-4 {
+			line = line[:width-7] + "..."
+		}
 
-                b.WriteString(style.Render(line) + "\n")
+		b.WriteString(style.Render(line) + "\n")
 
-                // Add source info for selected item
-                if i == m.selectedIndex {
-                        sourceLine := fmt.Sprintf("    Source: %s", article.Source)
-                        if len(sourceLine) > width-4 {
-                                sourceLine = sourceLine[:width-7] + "..."
-                        }
-                        b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#7D7D7D")).Render(sourceLine) + "\n")
-                }
-        }
+		// Add source info for selected item
+		if i == m.selectedIndex {
+			sourceLine := fmt.Sprintf("    Source: %s", article.Source)
+			if len(sourceLine) > width-4 {
+				sourceLine = sourceLine[:width-7] + "..."
+			}
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#7D7D7D")).Render(sourceLine) + "\n")
+		}
+	}
 
-        b.WriteString("\n")
-        b.WriteString(helpStyle.Render("↑↓ navigate • Enter preview • Space open • V view • R toggle"))
-        b.WriteString("\n")
-        b.WriteString(helpStyle.Render("/ search • S source • F filter • ESC clear • Q quit"))
+	b.WriteString("\n")
+	b.WriteString(helpStyle.Render("↑↓ navigate • Enter preview • Space open • V view • R toggle"))
+	b.WriteString("\n")
+	b.WriteString(helpStyle.Render("/ search • S source • F filter • ESC clear • Q quit"))
 
-        return lipgloss.NewStyle().Width(width).Render(b.String())
+	return lipgloss.NewStyle().Width(width).Render(b.String())
 }
 
 func (m Model) renderPreview(width int) string {
-        if m.selectedIndex >= len(m.filteredArticles) {
-                return previewStyle.Width(width).Render("No article selected")
-        }
+	if m.selectedIndex >= len(m.filteredArticles) {
+		return previewStyle.Width(width).Render("No article selected")
+	}
 
-        article := m.filteredArticles[m.selectedIndex]
+	article := m.filteredArticles[m.selectedIndex]
 
-        var b strings.Builder
+	var b strings.Builder
 
-        // Title
-        b.WriteString(lipgloss.NewStyle().Bold(true).Render(article.Title) + "\n\n")
+	// Title
+	b.WriteString(lipgloss.NewStyle().Bold(true).Render(article.Title) + "\n\n")
 
-        // Status
-        status := "Unread"
-        if article.IsRead {
-                status = "Read"
-        }
-        b.WriteString(fmt.Sprintf("Status: %s\n\n", status))
+	// Status
+	status := "Unread"
+	if article.IsRead {
+		status = "Read"
+	}
+	b.WriteString(fmt.Sprintf("Status: %s\n\n", status))
 
-        // Summary
-        b.WriteString("Summary:\n")
-        if article.Summary != "" {
-                // Format summary with bullet points on separate lines
-                formatted := formatSummaryWithBullets(article.Summary, width-4)
-                b.WriteString(formatted + "\n\n")
-        } else {
-                b.WriteString("No summary available\n\n")
-        }
+	// Summary
+	b.WriteString("Summary:\n")
+	if article.Summary != "" {
+		// Format summary with bullet points on separate lines
+		formatted := formatSummaryWithBullets(article.Summary, width-4)
+		b.WriteString(formatted + "\n\n")
+	} else {
+		b.WriteString("No summary available\n\n")
+	}
 
-        // URL
-        if article.URL != "" {
-                b.WriteString("URL: " + article.URL + "\n\n")
-        }
+	// URL
+	if article.URL != "" {
+		b.WriteString("URL: " + article.URL + "\n\n")
+	}
 
-        // Help text
-        b.WriteString(helpStyle.Render("Enter to mark as read • Space to open in browser • V to view in terminal"))
+	// Help text
+	b.WriteString(helpStyle.Render("Enter to mark as read • Space to open in browser • V to view in terminal"))
 
-        return previewStyle.Width(width).Render(b.String())
+	return previewStyle.Width(width).Render(b.String())
 }
 
 func (m Model) countUnread() int {
-        count := 0
-        for _, article := range m.articles {
-                if !article.IsRead {
-                        count++
-                }
-        }
-        return count
+	count := 0
+	for _, article := range m.articles {
+		if !article.IsRead {
+			count++
+		}
+	}
+	return count
 }
 
 func (m *Model) getSelectedArticle() *ArticleItem {
-        if m.selectedIndex >= len(m.filteredArticles) {
-                return nil
-        }
+	if m.selectedIndex >= len(m.filteredArticles) {
+		return nil
+	}
 
-        // Find the article in the original slice to modify it
-        selectedArticle := &m.filteredArticles[m.selectedIndex]
-        for i := range m.articles {
-                if m.articles[i].ID == selectedArticle.ID {
-                        return &m.articles[i]
-                }
-        }
-        return nil
+	// Find the article in the original slice to modify it
+	selectedArticle := &m.filteredArticles[m.selectedIndex]
+	for i := range m.articles {
+		if m.articles[i].ID == selectedArticle.ID {
+			return &m.articles[i]
+		}
+	}
+	return nil
 }
 
 func (m *Model) applyFilters() {
-        m.filteredArticles = nil
+	m.filteredArticles = nil
 
-        for _, article := range m.articles {
-                if m.matchesFilters(article) {
-                        m.filteredArticles = append(m.filteredArticles, article)
-                }
-        }
+	for _, article := range m.articles {
+		if m.matchesFilters(article) {
+			m.filteredArticles = append(m.filteredArticles, article)
+		}
+	}
 
-        // Sort articles by source while maintaining stable secondary ordering
-        m.sortArticlesBySource()
+	// Sort articles by source while maintaining stable secondary ordering
+	m.sortArticlesBySource()
 
-        // Adjust selected index if needed
-        if m.selectedIndex >= len(m.filteredArticles) {
-                m.selectedIndex = len(m.filteredArticles) - 1
-        }
-        if m.selectedIndex < 0 {
-                m.selectedIndex = 0
-        }
+	// Adjust selected index if needed
+	if m.selectedIndex >= len(m.filteredArticles) {
+		m.selectedIndex = len(m.filteredArticles) - 1
+	}
+	if m.selectedIndex < 0 {
+		m.selectedIndex = 0
+	}
 }
 
 func (m Model) matchesFilters(article ArticleItem) bool {
-        // Search filter
-        searchTerm := strings.ToLower(m.searchInput.Value())
-        if searchTerm != "" {
-                titleMatch := strings.Contains(strings.ToLower(article.Title), searchTerm)
-                summaryMatch := strings.Contains(strings.ToLower(article.Summary), searchTerm)
-                if !titleMatch && !summaryMatch {
-                        return false
-                }
-        }
+	// Search filter
+	searchTerm := strings.ToLower(m.searchInput.Value())
+	if searchTerm != "" {
+		titleMatch := strings.Contains(strings.ToLower(article.Title), searchTerm)
+		summaryMatch := strings.Contains(strings.ToLower(article.Summary), searchTerm)
+		if !titleMatch && !summaryMatch {
+			return false
+		}
+	}
 
-        // Source filter
-        if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
-                if article.Source != m.sourceFilter {
-                        return false
-                }
-        }
+	// Source filter
+	if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
+		if article.Source != m.sourceFilter {
+			return false
+		}
+	}
 
-        // Read status filter
-        switch m.readStatusFilter {
-        case ShowUnread:
-                if article.IsRead {
-                        return false
-                }
-        case ShowRead:
-                if !article.IsRead {
-                        return false
-                }
-        }
+	// Read status filter
+	switch m.readStatusFilter {
+	case ShowUnread:
+		if article.IsRead {
+			return false
+		}
+	case ShowRead:
+		if !article.IsRead {
+			return false
+		}
+	}
 
-        return true
+	return true
 }
 
 func (m *Model) cycleSourceFilter() {
-        m.sourceIndex = (m.sourceIndex + 1) % len(m.availableSources)
-        m.sourceFilter = m.availableSources[m.sourceIndex]
+	m.sourceIndex = (m.sourceIndex + 1) % len(m.availableSources)
+	m.sourceFilter = m.availableSources[m.sourceIndex]
 }
 
 func (m *Model) cycleReadStatusFilter() {
-        switch m.readStatusFilter {
-        case ShowAll:
-                m.readStatusFilter = ShowUnread
-        case ShowUnread:
-                m.readStatusFilter = ShowRead
-        case ShowRead:
-                m.readStatusFilter = ShowAll
-        }
+	switch m.readStatusFilter {
+	case ShowAll:
+		m.readStatusFilter = ShowUnread
+	case ShowUnread:
+		m.readStatusFilter = ShowRead
+	case ShowRead:
+		m.readStatusFilter = ShowAll
+	}
 }
 
 func (m *Model) clearFilters() {
-        m.searchInput.SetValue("")
-        m.sourceFilter = ""
-        m.sourceIndex = 0
-        m.readStatusFilter = ShowAll
+	m.searchInput.SetValue("")
+	m.sourceFilter = ""
+	m.sourceIndex = 0
+	m.readStatusFilter = ShowAll
 }
 
 func (m Model) getFilterInfo() string {
-        var filters []string
+	var filters []string
 
-        if m.searchInput.Value() != "" {
-                filters = append(filters, fmt.Sprintf("Search: %s", m.searchInput.Value()))
-        }
+	if m.searchInput.Value() != "" {
+		filters = append(filters, fmt.Sprintf("Search: %s", m.searchInput.Value()))
+	}
 
-        if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
-                filters = append(filters, fmt.Sprintf("Source: %s", m.sourceFilter))
-        }
+	if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
+		filters = append(filters, fmt.Sprintf("Source: %s", m.sourceFilter))
+	}
 
-        switch m.readStatusFilter {
-        case ShowUnread:
-                filters = append(filters, "Status: Unread only")
-        case ShowRead:
-                filters = append(filters, "Status: Read only")
-        }
+	switch m.readStatusFilter {
+	case ShowUnread:
+		filters = append(filters, "Status: Unread only")
+	case ShowRead:
+		filters = append(filters, "Status: Read only")
+	}
 
-        if len(filters) == 0 {
-                return ""
-        }
+	if len(filters) == 0 {
+		return ""
+	}
 
-        return "Filters: " + strings.Join(filters, " • ")
+	return "Filters: " + strings.Join(filters, " • ")
 }
 
 func wordWrap(text string, width int) string {
-        if len(text) <= width {
-                return text
-        }
+	if len(text) <= width {
+		return text
+	}
 
-        words := strings.Fields(text)
-        if len(words) == 0 {
-                return text
-        }
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return text
+	}
 
-        var lines []string
-        var currentLine strings.Builder
+	var lines []string
+	var currentLine strings.Builder
 
-        for _, word := range words {
-                if currentLine.Len() == 0 {
-                        currentLine.WriteString(word)
-                } else if currentLine.Len()+1+len(word) <= width {
-                        currentLine.WriteString(" " + word)
-                } else {
-                        lines = append(lines, currentLine.String())
-                        currentLine.Reset()
-                        currentLine.WriteString(word)
-                }
-        }
+	for _, word := range words {
+		if currentLine.Len() == 0 {
+			currentLine.WriteString(word)
+		} else if currentLine.Len()+1+len(word) <= width {
+			currentLine.WriteString(" " + word)
+		} else {
+			lines = append(lines, currentLine.String())
+			currentLine.Reset()
+			currentLine.WriteString(word)
+		}
+	}
 
-        if currentLine.Len() > 0 {
-                lines = append(lines, currentLine.String())
-        }
+	if currentLine.Len() > 0 {
+		lines = append(lines, currentLine.String())
+	}
 
-        return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n")
 }
 
 func openBrowser(url string) error {
-        if url == "" {
-                return fmt.Errorf("no URL provided")
-        }
+	if url == "" {
+		return fmt.Errorf("no URL provided")
+	}
 
-        var cmd *exec.Cmd
+	var cmd *exec.Cmd
 
-        switch runtime.GOOS {
-        case "linux":
-                cmd = exec.Command("xdg-open", url)
-        case "windows":
-                cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-        case "darwin":
-                cmd = exec.Command("open", url)
-        default:
-                return fmt.Errorf("unsupported platform")
-        }
+	switch runtime.GOOS {
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		return fmt.Errorf("unsupported platform")
+	}
 
-        return cmd.Start()
+	return cmd.Start()
 }
 
 func (m *Model) sortArticlesBySource() {
-        sort.SliceStable(m.filteredArticles, func(i, j int) bool {
-                if m.filteredArticles[i].Source == m.filteredArticles[j].Source {
-                        return m.filteredArticles[i].ID < m.filteredArticles[j].ID
-                }
-                return m.filteredArticles[i].Source < m.filteredArticles[j].Source
-        })
+	sort.SliceStable(m.filteredArticles, func(i, j int) bool {
+		if m.filteredArticles[i].Source == m.filteredArticles[j].Source {
+			return m.filteredArticles[i].ID < m.filteredArticles[j].ID
+		}
+		return m.filteredArticles[i].Source < m.filteredArticles[j].Source
+	})
 }
 
 func (m Model) countBySource(source string) int {
-        count := 0
-        for _, article := range m.filteredArticles {
-                if article.Source == source {
-                        count++
-                }
-        }
-        return count
+	count := 0
+	for _, article := range m.filteredArticles {
+		if article.Source == source {
+			count++
+		}
+	}
+	return count
 }
 
 func (m Model) shouldShowSourceHeaders() bool {
-        if len(m.filteredArticles) == 0 {
-                return false
-        }
-        
-        // Don't show headers if filtering to a specific source
-        if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
-                return false
-        }
-        
-        // Check if we have multiple sources
-        sourceMap := make(map[string]bool)
-        for _, article := range m.filteredArticles {
-                sourceMap[article.Source] = true
-        }
-        
-        return len(sourceMap) > 1
+	if len(m.filteredArticles) == 0 {
+		return false
+	}
+
+	// Don't show headers if filtering to a specific source
+	if m.sourceFilter != "" && m.sourceFilter != "All Sources" {
+		return false
+	}
+
+	// Check if we have multiple sources
+	sourceMap := make(map[string]bool)
+	for _, article := range m.filteredArticles {
+		sourceMap[article.Source] = true
+	}
+
+	return len(sourceMap) > 1
 }
 
 func formatSummaryWithBullets(summary string, width int) string {
-        // Split summary by bullet points
-        parts := strings.Split(summary, "•")
-        
-        var lines []string
-        for i, part := range parts {
-                // Skip empty first part (before first bullet)
-                if i == 0 && strings.TrimSpace(part) == "" {
-                        continue
-                }
-                
-                // Clean up the text (remove leading/trailing whitespace)
-                text := strings.TrimSpace(part)
-                if text == "" {
-                        continue
-                }
-                
-                // Add bullet point back and wrap the line
-                bulletText := "• " + text
-                wrapped := wordWrap(bulletText, width)
-                lines = append(lines, wrapped)
-        }
-        
-        return strings.Join(lines, "\n")
+	// Split summary by bullet points
+	parts := strings.Split(summary, "•")
+
+	var lines []string
+	for i, part := range parts {
+		// Skip empty first part (before first bullet)
+		if i == 0 && strings.TrimSpace(part) == "" {
+			continue
+		}
+
+		// Clean up the text (remove leading/trailing whitespace)
+		text := strings.TrimSpace(part)
+		if text == "" {
+			continue
+		}
+
+		// Add bullet point back and wrap the line
+		bulletText := "• " + text
+		wrapped := wordWrap(bulletText, width)
+		lines = append(lines, wrapped)
+	}
+
+	return strings.Join(lines, "\n")
 }
 
-
 func (m Model) renderArticleView() string {
-        if m.selectedIndex >= len(m.filteredArticles) {
-                return "No article selected\n\nPress 'esc' to go back"
-        }
+	if m.selectedIndex >= len(m.filteredArticles) {
+		return "No article selected\n\nPress 'esc' to go back"
+	}
 
-        selectedArticle := m.filteredArticles[m.selectedIndex]
-        
-        // Build the full article content first
-        var fullContent strings.Builder
-        
-        // Article header
-        header := fmt.Sprintf("📖 %s", selectedArticle.Title)
-        fullContent.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
-        fullContent.WriteString("\n\n")
-        
-        // Error or content
-        if m.loadingError != "" {
-                fullContent.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
-        } else if m.articleContent != "" {
-                // Render the markdown content using Glamour
-                var buf strings.Builder
-                if err := article.RenderMarkdown(m.articleContent, true, &buf); err != nil {
-                        fullContent.WriteString(fmt.Sprintf("Error rendering content: %v\n\n%s", err, m.articleContent))
-                } else {
-                        fullContent.WriteString(buf.String())
-                }
-                fullContent.WriteString("\n")
-        } else {
-                fullContent.WriteString("No content available\n\n")
-        }
-        
-        // Split content into lines for scrolling
-        lines := strings.Split(fullContent.String(), "\n")
-        
-        // Calculate viewport dimensions
-        availableHeight := m.height - 3 // Reserve space for help text
-        if availableHeight < 1 {
-                availableHeight = 10 // Fallback minimum
-        }
-        
-        // Clamp scroll offset
-        maxScroll := len(lines) - availableHeight
-        if maxScroll < 0 {
-                maxScroll = 0
-        }
-        if m.scrollOffset > maxScroll {
-                m.scrollOffset = maxScroll
-        }
-        if m.scrollOffset < 0 {
-                m.scrollOffset = 0
-        }
-        
-        // Get the visible lines
-        startLine := m.scrollOffset
-        endLine := startLine + availableHeight
-        if endLine > len(lines) {
-                endLine = len(lines)
-        }
-        
-        visibleLines := lines[startLine:endLine]
-        
-        // Build the final display
-        var display strings.Builder
-        display.WriteString(strings.Join(visibleLines, "\n"))
-        display.WriteString("\n\n")
-        
-        // Scroll indicators and help text
-        scrollInfo := ""
-        if len(lines) > availableHeight {
-                scrollInfo = fmt.Sprintf(" • Line %d-%d of %d", startLine+1, endLine, len(lines))
-        }
-        
-        helpText := fmt.Sprintf("↑↓/jk scroll • PgUp/PgDn page • Home/End • ESC back • Q quit%s", scrollInfo)
-        display.WriteString(helpStyle.Render(helpText))
-        
-        return display.String()
+	selectedArticle := m.filteredArticles[m.selectedIndex]
+
+	// Build the full article content first
+	var fullContent strings.Builder
+
+	// Article header
+	header := fmt.Sprintf("📖 %s", selectedArticle.Title)
+	fullContent.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
+	fullContent.WriteString("\n\n")
+
+	// Error or content
+	if m.loadingError != "" {
+		fullContent.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
+	} else if m.articleContent != "" {
+		// Render the markdown content using Glamour
+		var buf strings.Builder
+		if err := article.RenderMarkdown(m.articleContent, true, &buf); err != nil {
+			fullContent.WriteString(fmt.Sprintf("Error rendering content: %v\n\n%s", err, m.articleContent))
+		} else {
+			fullContent.WriteString(buf.String())
+		}
+		fullContent.WriteString("\n")
+	} else {
+		fullContent.WriteString("No content available\n\n")
+	}
+
+	// Split content into lines for scrolling
+	lines := strings.Split(fullContent.String(), "\n")
+
+	// Calculate viewport dimensions
+	availableHeight := m.height - 3 // Reserve space for help text
+	if availableHeight < 1 {
+		availableHeight = 10 // Fallback minimum
+	}
+
+	// Clamp scroll offset
+	maxScroll := len(lines) - availableHeight
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if m.scrollOffset > maxScroll {
+		m.scrollOffset = maxScroll
+	}
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
+	}
+
+	// Get the visible lines
+	startLine := m.scrollOffset
+	endLine := startLine + availableHeight
+	if endLine > len(lines) {
+		endLine = len(lines)
+	}
+
+	visibleLines := lines[startLine:endLine]
+
+	// Build the final display
+	var display strings.Builder
+	display.WriteString(strings.Join(visibleLines, "\n"))
+	display.WriteString("\n\n")
+
+	// Scroll indicators and help text
+	scrollInfo := ""
+	if len(lines) > availableHeight {
+		scrollInfo = fmt.Sprintf(" • Line %d-%d of %d", startLine+1, endLine, len(lines))
+	}
+
+	helpText := fmt.Sprintf("↑↓/jk scroll • PgUp/PgDn page • Home/End • ESC back • Q quit%s", scrollInfo)
+	display.WriteString(helpStyle.Render(helpText))
+
+	return display.String()
 }
