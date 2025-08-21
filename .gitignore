@@ -5,6 +5,7 @@
 *.so
 *.dylib
 rss-agent-cli
+ai-news-agent
 
 # Test binary, built with `go test -c`
 *.test
