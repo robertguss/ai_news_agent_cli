@@ -1,6 +1,6 @@
-# AI News Agent CLI
+# RSS Agent CLI
 
-An AI-powered news aggregation CLI that helps software engineers stay up-to-date with the latest developments in Artificial Intelligence. Built for terminal enthusiasts who want intelligent news curation without leaving their command line.
+An AI-powered RSS aggregation CLI that intelligently curates and summarizes content from any RSS feeds. Perfect for terminal enthusiasts who want smart content curation without leaving their command line. While the default configuration focuses on AI/tech news, you can easily configure it for any topics - sports, business, science, or any RSS-enabled content.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -20,8 +20,9 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 ## Features
 
 ### Current
+- ✅ **Universal RSS Support**: Works with any RSS feeds - news, blogs, podcasts, or custom sources
 - ✅ **Smart Fetching**: Automatically fetch content from configured RSS sources with per-source article limiting
-- ✅ **AI-Powered Processing**: Summarize articles using Google Gemini API
+- ✅ **AI-Powered Processing**: Summarize articles using Google Gemini API for intelligent curation
 - ✅ **Local Storage**: SQLite database for offline access and article management
 - ✅ **Terminal-Native Reading**: Beautiful markdown rendering for article content
 - ✅ **Article Management**: View, read, and open articles with intuitive commands
@@ -46,10 +47,10 @@ An AI-powered news aggregation CLI that helps software engineers stay up-to-date
 
 ```bash
 # Clone and build from source
-git clone https://github.com/robertguss/ai-news-agent-cli.git
-cd ai-news-agent-cli
+git clone https://github.com/robertguss/rss-agent-cli.git
+cd rss-agent-cli
 just build
-# or alternatively: go build -o bin/ai-news-agent-cli .
+# or alternatively: go build -o bin/rss-agent-cli .
 ```
 
 ### Setup
@@ -64,7 +65,7 @@ export GEMINI_API_KEY="your-gemini-api-key-here"
 3. **Configure sources** (optional - default config included):
 ```bash
 # Copy and customize the config file
-cp configs/config.yaml ~/.ainews/config.yaml
+cp configs/config.yaml ~/.rss-agent/config.yaml
 ```
 
 ### Basic Usage
@@ -174,7 +175,7 @@ export BACKOFF_MAX_MS="2000"
 export DB_BUSY_RETRIES="3"
 
 # Optional: Custom log file location
-export LOG_FILE="$HOME/.ainews/agent.log"
+export LOG_FILE="$HOME/.rss-agent/agent.log"
 ```
 
 ### Configuration File
@@ -183,10 +184,11 @@ The application looks for `config.yaml` in the current directory or `./configs/`
 
 ```yaml
 # Database file location
-dsn: "./ai-news.db"
+dsn: "./rss-agent.db"
 
-# RSS sources to fetch from
+# RSS sources to fetch from - customize for any content type!
 sources:
+  # AI/Tech News (default configuration)
   - name: "Hugging Face Blog"
     url: "https://huggingface.co/blog/feed.xml"
     type: "rss"
@@ -200,13 +202,31 @@ sources:
     type: "rss"
     priority: 2
 
+  # Example: Sports feeds
+  # - name: "ESPN NFL"
+  #   url: "https://www.espn.com/espn/rss/nfl/news"
+  #   type: "rss"
+  #   priority: 1
+
+  # Example: Business news
+  # - name: "Reuters Business"
+  #   url: "https://feeds.reuters.com/reuters/businessNews"
+  #   type: "rss"
+  #   priority: 1
+
+  # Example: Programming blogs
+  # - name: "Hacker News"
+  #   url: "https://hnrss.org/frontpage"
+  #   type: "rss"
+  #   priority: 2
+
 # Optional: Override default settings
 network_timeout: "30s"
 max_retries: 3
 backoff_base_ms: 250
 backoff_max_ms: 2000
 db_busy_retries: 3
-log_file: "$HOME/.ainews/agent.log"
+log_file: "$HOME/.rss-agent/agent.log"
 ```
 
 ### Source Priority System
@@ -218,7 +238,7 @@ log_file: "$HOME/.ainews/agent.log"
 ## Project Structure
 
 ```
-ai-news-agent-cli/
+rss-agent-cli/
 ├── cmd/                           # CLI commands (Cobra)
 │   ├── fetch.go                  # Fetch articles command
 │   ├── open.go                   # Open article in browser
@@ -249,6 +269,66 @@ ai-news-agent-cli/
 ├── main.go                      # Application entry point
 ├── go.mod                       # Go module definition
 └── README.md                    # This file
+```
+
+### RSS Feed Examples
+
+The RSS Agent CLI works with any RSS feeds. Here are some popular categories:
+
+**Technology & Programming:**
+```yaml
+sources:
+  - name: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+    type: "rss"
+    priority: 1
+  - name: "GitHub Blog"
+    url: "https://github.blog/feed/"
+    type: "rss"
+    priority: 1
+  - name: "Stack Overflow Blog"
+    url: "https://stackoverflow.blog/feed/"
+    type: "rss"
+    priority: 2
+```
+
+**Business & Finance:**
+```yaml
+sources:
+  - name: "Reuters Business"
+    url: "https://feeds.reuters.com/reuters/businessNews"
+    type: "rss"
+    priority: 1
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    type: "rss"
+    priority: 1
+```
+
+**Science & Research:**
+```yaml
+sources:
+  - name: "Nature News"
+    url: "https://www.nature.com/nature.rss"
+    type: "rss"
+    priority: 1
+  - name: "Science Daily"
+    url: "https://www.sciencedaily.com/rss/top.xml"
+    type: "rss"
+    priority: 1
+```
+
+**Sports:**
+```yaml
+sources:
+  - name: "ESPN Top Stories"
+    url: "https://www.espn.com/espn/rss/news"
+    type: "rss"
+    priority: 1
+  - name: "BBC Sport"
+    url: "http://feeds.bbci.co.uk/sport/rss.xml"
+    type: "rss"
+    priority: 1
 ```
 
 ## Roadmap
@@ -313,8 +393,8 @@ We welcome contributions! Here's how to get started:
 
 ```bash
 # Clone the repository
-git clone https://github.com/robertguss/ai-news-agent-cli.git
-cd ai-news-agent-cli
+git clone https://github.com/robertguss/rss-agent-cli.git
+cd rss-agent-cli
 
 # Install dependencies
 go mod download
@@ -330,7 +410,7 @@ go test -cover ./...
 
 # Build the application
 just build
-# or: go build -o bin/ai-news-agent-cli .
+# or: go build -o bin/rss-agent-cli .
 
 # Run locally
 ./bin/ai-news-agent-cli --help
