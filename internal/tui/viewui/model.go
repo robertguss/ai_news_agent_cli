@@ -68,6 +68,7 @@ type Model struct {
         viewMode        ViewMode
         articleContent  string
         loadingError    string
+        scrollOffset    int
 }
 
 var (
@@ -146,8 +147,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 
         case tea.KeyMsg:
+                // Handle article view mode specific keys
+                if m.viewMode == ViewModeArticle {
+                        switch msg.String() {
+                        case "q", "ctrl+c":
+                                return m, tea.Quit
+                        case "esc":
+                                m.viewMode = ViewModeList
+                                m.articleContent = ""
+                                m.loadingError = ""
+                                m.scrollOffset = 0
+                        case "up", "k":
+                                if m.scrollOffset > 0 {
+                                        m.scrollOffset--
+                                }
+                        case "down", "j":
+                                m.scrollOffset++
+                                // Bounds will be checked in renderArticleView
+                        case "pgup":
+                                m.scrollOffset -= 10
+                                if m.scrollOffset < 0 {
+                                        m.scrollOffset = 0
+                                }
+                        case "pgdown":
+                                m.scrollOffset += 10
+                        case "home":
+                                m.scrollOffset = 0
+                        case "end":
+                                // Set to a large number, will be clamped in renderArticleView
+                                m.scrollOffset = 9999
+                        }
+                        return m, cmd
                 // Handle filter mode specific keys
-                if m.filterMode == FilterSearch {
+                } else if m.filterMode == FilterSearch {
                         switch msg.String() {
                         case "esc":
                                 m.filterMode = FilterNone
@@ -224,12 +256,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                                         if article != nil {
                                                 m.viewMode = ViewModeArticle
                                                 m.loadingError = ""
+                                                m.scrollOffset = 0
                                                 
                                                 if article.Content != "" {
+                                                        // Remove content length limit now that we have scrolling
                                                         m.articleContent = article.Content
                                                 } else {
                                                         m.articleContent = ""
-                                                        m.loadingError = "No content available for this article"
+                                                        m.loadingError = fmt.Sprintf("No content available for this article (content length: %d)", len(article.Content))
                                                 }
                                         }
                                 }
@@ -248,14 +282,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                                 m.applyFilters()
 
                         case "esc":
-                                if m.viewMode == ViewModeArticle {
-                                        m.viewMode = ViewModeList
-                                        m.articleContent = ""
-                                        m.loadingError = ""
-                                } else {
-                                        m.clearFilters()
-                                        m.applyFilters()
-                                }
+                                m.clearFilters()
+                                m.applyFilters()
                         }
                 }
         }
@@ -672,33 +700,75 @@ func (m Model) renderArticleView() string {
 
         selectedArticle := m.filteredArticles[m.selectedIndex]
         
-        var content strings.Builder
+        // Build the full article content first
+        var fullContent strings.Builder
         
         // Article header
         header := fmt.Sprintf("📖 %s", selectedArticle.Title)
-        content.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
-        content.WriteString("\n")
-        content.WriteString(fmt.Sprintf("Source: %s", selectedArticle.Source))
-        content.WriteString("\n\n")
+        fullContent.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00D7FF")).Render(header))
+        fullContent.WriteString("\n")
+        fullContent.WriteString(fmt.Sprintf("Source: %s", selectedArticle.Source))
+        fullContent.WriteString("\n\n")
         
         // Error or content
         if m.loadingError != "" {
-                content.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
+                fullContent.WriteString(fmt.Sprintf("❌ %s\n\n", m.loadingError))
         } else if m.articleContent != "" {
                 // Render the markdown content using Glamour
                 var buf strings.Builder
                 if err := article.RenderMarkdown(m.articleContent, true, &buf); err != nil {
-                        content.WriteString(fmt.Sprintf("Error rendering content: %v\n\n%s", err, m.articleContent))
+                        fullContent.WriteString(fmt.Sprintf("Error rendering content: %v\n\n%s", err, m.articleContent))
                 } else {
-                        content.WriteString(buf.String())
+                        fullContent.WriteString(buf.String())
                 }
-                content.WriteString("\n")
+                fullContent.WriteString("\n")
         } else {
-                content.WriteString("No content available\n\n")
+                fullContent.WriteString("No content available\n\n")
         }
         
-        // Help text
-        content.WriteString(helpStyle.Render("Press 'esc' to go back • 'q' to quit"))
+        // Split content into lines for scrolling
+        lines := strings.Split(fullContent.String(), "\n")
         
-        return content.String()
+        // Calculate viewport dimensions
+        availableHeight := m.height - 3 // Reserve space for help text
+        if availableHeight < 1 {
+                availableHeight = 10 // Fallback minimum
+        }
+        
+        // Clamp scroll offset
+        maxScroll := len(lines) - availableHeight
+        if maxScroll < 0 {
+                maxScroll = 0
+        }
+        if m.scrollOffset > maxScroll {
+                m.scrollOffset = maxScroll
+        }
+        if m.scrollOffset < 0 {
+                m.scrollOffset = 0
+        }
+        
+        // Get the visible lines
+        startLine := m.scrollOffset
+        endLine := startLine + availableHeight
+        if endLine > len(lines) {
+                endLine = len(lines)
+        }
+        
+        visibleLines := lines[startLine:endLine]
+        
+        // Build the final display
+        var display strings.Builder
+        display.WriteString(strings.Join(visibleLines, "\n"))
+        display.WriteString("\n\n")
+        
+        // Scroll indicators and help text
+        scrollInfo := ""
+        if len(lines) > availableHeight {
+                scrollInfo = fmt.Sprintf(" • Line %d-%d of %d", startLine+1, endLine, len(lines))
+        }
+        
+        helpText := fmt.Sprintf("↑↓/jk scroll • PgUp/PgDn page • Home/End • ESC back • Q quit%s", scrollInfo)
+        display.WriteString(helpStyle.Render(helpText))
+        
+        return display.String()
 }

@@ -16,9 +16,10 @@ func RenderMarkdown(content string, styled bool, writer io.Writer) error {
 		return nil
 	}
 
-	if err := tryGlowCLI(content, writer); err == nil {
-		return nil
-	}
+	// Skip glow CLI for now to avoid potential hanging issues
+	// if err := tryGlowCLI(content, writer); err == nil {
+	//	return nil
+	// }
 
 	return renderWithGlamour(content, writer)
 }
@@ -37,9 +38,9 @@ func tryGlowCLI(content string, writer io.Writer) error {
 }
 
 func renderWithGlamour(content string, writer io.Writer) error {
+	// Use simpler, faster Glamour settings
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithPreservedNewLines(),
+		glamour.WithStandardStyle("dark"), // Use a predefined style instead of auto-detection
 		glamour.WithWordWrap(80),
 	)
 	if err != nil {
