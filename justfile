@@ -1,7 +1,7 @@
-# justfile for ai-news-agent-cli
+# justfile for rss-agent-cli
 set dotenv-load
 
-BINARY_NAME := "ai-news-agent-cli"
+BINARY_NAME := "rss-agent-cli"
 BIN_DIR := "bin"
 DIST_DIR := "dist"
 VERSION := `git describe --tags --always --dirty 2>/dev/null || echo "dev"`

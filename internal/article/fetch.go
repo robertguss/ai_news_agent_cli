@@ -31,7 +31,7 @@ func FetchArticle(ctx context.Context, articleURL string, noCache bool) (string,
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", "ai-news-agent-cli/1.0")
+	req.Header.Set("User-Agent", "rss-agent-cli/1.0")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

@@ -8,7 +8,7 @@ import (
         "github.com/charmbracelet/bubbles/progress"
         "github.com/charmbracelet/bubbles/spinner"
         tea "github.com/charmbracelet/bubbletea"
-        "github.com/robertguss/ai-news-agent-cli/internal/tui"
+        "github.com/robertguss/rss-agent-cli/internal/tui"
 )
 
 type SourceProgress struct {

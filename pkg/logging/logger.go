@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/pkg/errs"
+	"github.com/robertguss/rss-agent-cli/pkg/errs"
 )
 
 var logger *log.Logger

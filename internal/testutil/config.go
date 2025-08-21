@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
+	"github.com/robertguss/rss-agent-cli/internal/config"
 )
 
 func TestConfig() *config.Config {

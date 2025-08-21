@@ -72,28 +72,28 @@ cp configs/config.yaml ~/.rss-agent/config.yaml
 
 ```bash
 # Display help
-./bin/ai-news-agent-cli --help
+./bin/rss-agent-cli --help
 
 # Check version
-./bin/ai-news-agent-cli --version
+./bin/rss-agent-cli --version
 
 # Fetch latest articles (default: 5 per source)
-./bin/ai-news-agent-cli fetch
+./bin/rss-agent-cli fetch
 
 # Fetch more articles per source
-./bin/ai-news-agent-cli fetch -n 10
+./bin/rss-agent-cli fetch -n 10
 
 # Fetch unlimited articles (legacy behavior)
-./bin/ai-news-agent-cli fetch -n 0
+./bin/rss-agent-cli fetch -n 0
 
 # View articles
-./bin/ai-news-agent-cli view
+./bin/rss-agent-cli view
 
 # Read a specific article
-./bin/ai-news-agent-cli read 1
+./bin/rss-agent-cli read 1
 
 # Open article in browser
-./bin/ai-news-agent-cli open 1
+./bin/rss-agent-cli open 1
 ```
 
 ## Usage
@@ -104,56 +104,56 @@ The CLI supports the following commands:
 
 ```bash
 # Fetch and process new articles from configured sources
-./bin/ai-news-agent-cli fetch
+./bin/rss-agent-cli fetch
 
 # Fetch with custom article limit per source
-./bin/ai-news-agent-cli fetch -n 10        # Max 10 articles per source
-./bin/ai-news-agent-cli fetch --limit 3    # Max 3 articles per source
+./bin/rss-agent-cli fetch -n 10        # Max 10 articles per source
+./bin/rss-agent-cli fetch --limit 3    # Max 3 articles per source
 
 # View stored articles with AI-generated summaries
-./bin/ai-news-agent-cli view
+./bin/rss-agent-cli view
 
 # Read full article content in terminal with markdown rendering
-./bin/ai-news-agent-cli read <article-number>
+./bin/rss-agent-cli read <article-number>
 
 # Open article in your default browser
-./bin/ai-news-agent-cli open <article-number>
+./bin/rss-agent-cli open <article-number>
 
 # Generate shell completion scripts
-./bin/ai-news-agent-cli completion [bash|zsh|fish|powershell]
+./bin/rss-agent-cli completion [bash|zsh|fish|powershell]
 ```
 
 ### Command Options
 
 ```bash
 # Fetch command options
-./bin/ai-news-agent-cli fetch -n 5           # Limit to 5 articles per source (default)
-./bin/ai-news-agent-cli fetch --limit 10     # Limit to 10 articles per source
-./bin/ai-news-agent-cli fetch -n 0           # Unlimited articles (legacy behavior)
+./bin/rss-agent-cli fetch -n 5           # Limit to 5 articles per source (default)
+./bin/rss-agent-cli fetch --limit 10     # Limit to 10 articles per source
+./bin/rss-agent-cli fetch -n 0           # Unlimited articles (legacy behavior)
 
 # Read command options
-./bin/ai-news-agent-cli read 1 --no-cache    # Force fresh fetch
-./bin/ai-news-agent-cli read 1 --no-style    # Plain text output
+./bin/rss-agent-cli read 1 --no-cache    # Force fresh fetch
+./bin/rss-agent-cli read 1 --no-style    # Plain text output
 
 # View command options (coming soon)
-./bin/ai-news-agent-cli view --all           # Show read and unread
-./bin/ai-news-agent-cli view --unread        # Show only unread
+./bin/rss-agent-cli view --all           # Show read and unread
+./bin/rss-agent-cli view --unread        # Show only unread
 ```
 
 ### Example Workflow
 
-1. **Fetch latest articles**: `./bin/ai-news-agent-cli fetch` (gets 5 newest per source by default)
-2. **Review AI summaries**: `./bin/ai-news-agent-cli view`
-3. **Read interesting articles**: `./bin/ai-news-agent-cli read 2`
-4. **Open complex content in browser**: `./bin/ai-news-agent-cli open 5`
+1. **Fetch latest articles**: `./bin/rss-agent-cli fetch` (gets 5 newest per source by default)
+2. **Review AI summaries**: `./bin/rss-agent-cli view`
+3. **Read interesting articles**: `./bin/rss-agent-cli read 2`
+4. **Open complex content in browser**: `./bin/rss-agent-cli open 5`
 
 ### Article Limiting
 
 By default, the fetch command retrieves the **5 most recent articles** from each RSS source to focus on current news. This provides faster fetching and more relevant content compared to processing entire RSS feeds.
 
-- **Default behavior**: `./bin/ai-news-agent-cli fetch` (5 articles per source)
-- **Custom limit**: `./bin/ai-news-agent-cli fetch -n 10` (10 articles per source)  
-- **Legacy unlimited**: `./bin/ai-news-agent-cli fetch -n 0` (all articles, slower)
+- **Default behavior**: `./bin/rss-agent-cli fetch` (5 articles per source)
+- **Custom limit**: `./bin/rss-agent-cli fetch -n 10` (10 articles per source)  
+- **Legacy unlimited**: `./bin/rss-agent-cli fetch -n 0` (all articles, slower)
 
 Articles are sorted by publish date (newest first) before applying the limit.
 
@@ -413,12 +413,12 @@ just build
 # or: go build -o bin/rss-agent-cli .
 
 # Run locally
-./bin/ai-news-agent-cli --help
+./bin/rss-agent-cli --help
 
 # Try the full workflow
-./bin/ai-news-agent-cli fetch
-./bin/ai-news-agent-cli view
-./bin/ai-news-agent-cli read 1
+./bin/rss-agent-cli fetch
+./bin/rss-agent-cli view
+./bin/rss-agent-cli read 1
 ```
 
 ### Code Style

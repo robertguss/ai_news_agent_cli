@@ -10,10 +10,10 @@ import (
         "time"
 
         tea "github.com/charmbracelet/bubbletea"
-        "github.com/robertguss/ai-news-agent-cli/internal/database"
-        "github.com/robertguss/ai-news-agent-cli/internal/state"
-        "github.com/robertguss/ai-news-agent-cli/internal/tui"
-        "github.com/robertguss/ai-news-agent-cli/internal/tui/viewui"
+        "github.com/robertguss/rss-agent-cli/internal/database"
+        "github.com/robertguss/rss-agent-cli/internal/state"
+        "github.com/robertguss/rss-agent-cli/internal/tui"
+        "github.com/robertguss/rss-agent-cli/internal/tui/viewui"
         "github.com/spf13/cobra"
 )
 

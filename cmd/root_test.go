@@ -18,5 +18,5 @@ func TestRootCmd(t *testing.T) {
 	assert.NoError(t, err)
 
 	output := buf.String()
-	assert.Contains(t, output, "AI News Agent")
+	assert.Contains(t, output, "RSS Agent")
 }

@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Development Commands
 
 ### Build and Run
-- **Build**: `just build` or `go build -o bin/ai-news-agent-cli .`
-- **Run built binary**: `just run` or `./bin/ai-news-agent-cli`
+- **Build**: `just build` or `go build -o bin/rss-agent-cli .`
+- **Run built binary**: `just run` or `./bin/rss-agent-cli`
 - **Dev with live reload**: `just dev` (uses air if available, fallback to go run)
 - **Cross-compile**: `just cross-compile` (builds for multiple platforms)
 - **Install**: `just install` (installs to GOPATH/bin)

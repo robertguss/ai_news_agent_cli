@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-ai-news-agent-cli
+rss-agent-cli
 
 # Test binary, built with `go test -c`
 *.test
@@ -157,4 +157,4 @@ tramp
 # Local configuration files
 config.local.*
 .env.local
-ai-news-agent
+rss-agent

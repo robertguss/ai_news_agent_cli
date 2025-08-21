@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/database"
-	"github.com/robertguss/ai-news-agent-cli/internal/state"
-	"github.com/robertguss/ai-news-agent-cli/internal/tui"
+	"github.com/robertguss/rss-agent-cli/internal/database"
+	"github.com/robertguss/rss-agent-cli/internal/state"
+	"github.com/robertguss/rss-agent-cli/internal/tui"
 	"github.com/stretchr/testify/assert"
 )
 

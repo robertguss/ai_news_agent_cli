@@ -9,14 +9,14 @@ import (
 
 var version = "dev"
 
-// NewRootCmd creates and returns the root cobra command for the AI news agent CLI.
+// NewRootCmd creates and returns the root cobra command for the RSS agent CLI.
 // It sets up the basic command structure with version information and default behavior.
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ai-news-agent-cli",
-		Short: "AI-powered news aggregation CLI",
+		Use:   "rss-agent-cli",
+		Short: "AI-powered RSS aggregation CLI",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "AI News Agent")
+			fmt.Fprintln(cmd.OutOrStdout(), "RSS Agent")
 		},
 	}
 	cmd.Version = version

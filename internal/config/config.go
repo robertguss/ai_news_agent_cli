@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/pkg/retry"
+	"github.com/robertguss/rss-agent-cli/pkg/retry"
 	"github.com/spf13/viper"
 )
 

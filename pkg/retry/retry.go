@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/robertguss/ai-news-agent-cli/pkg/errs"
+	"github.com/robertguss/rss-agent-cli/pkg/errs"
 )
 
 // Config defines retry behavior with exponential backoff parameters.

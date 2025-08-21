@@ -9,14 +9,14 @@ import (
         "time"
 
         "github.com/mmcdole/gofeed"
-        "github.com/robertguss/ai-news-agent-cli/internal/ai/processor"
-        "github.com/robertguss/ai-news-agent-cli/internal/config"
-        "github.com/robertguss/ai-news-agent-cli/internal/database"
-        "github.com/robertguss/ai-news-agent-cli/internal/scraper"
-        "github.com/robertguss/ai-news-agent-cli/internal/tui"
-        "github.com/robertguss/ai-news-agent-cli/pkg/errs"
-        "github.com/robertguss/ai-news-agent-cli/pkg/logging"
-        "github.com/robertguss/ai-news-agent-cli/pkg/retry"
+        "github.com/robertguss/rss-agent-cli/internal/ai/processor"
+        "github.com/robertguss/rss-agent-cli/internal/config"
+        "github.com/robertguss/rss-agent-cli/internal/database"
+        "github.com/robertguss/rss-agent-cli/internal/scraper"
+        "github.com/robertguss/rss-agent-cli/internal/tui"
+        "github.com/robertguss/rss-agent-cli/pkg/errs"
+        "github.com/robertguss/rss-agent-cli/pkg/logging"
+        "github.com/robertguss/rss-agent-cli/pkg/retry"
 )
 
 type Source = config.Source

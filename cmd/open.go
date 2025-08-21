@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/browserutil"
-	"github.com/robertguss/ai-news-agent-cli/internal/state"
+	"github.com/robertguss/rss-agent-cli/internal/browserutil"
+	"github.com/robertguss/rss-agent-cli/internal/state"
 	"github.com/spf13/cobra"
 )
 

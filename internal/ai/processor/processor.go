@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
+	"github.com/robertguss/rss-agent-cli/internal/config"
 )
 
 //go:generate mockery --name=AIProcessor

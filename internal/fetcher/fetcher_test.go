@@ -8,8 +8,8 @@ import (
         "testing"
         "time"
 
-        "github.com/robertguss/ai-news-agent-cli/internal/database"
-        "github.com/robertguss/ai-news-agent-cli/internal/testutil"
+        "github.com/robertguss/rss-agent-cli/internal/database"
+        "github.com/robertguss/rss-agent-cli/internal/testutil"
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
         _ "modernc.org/sqlite"

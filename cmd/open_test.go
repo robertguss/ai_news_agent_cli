@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/browserutil"
-	"github.com/robertguss/ai-news-agent-cli/internal/state"
+	"github.com/robertguss/rss-agent-cli/internal/browserutil"
+	"github.com/robertguss/rss-agent-cli/internal/state"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

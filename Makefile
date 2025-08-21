@@ -7,8 +7,8 @@ all: fmt vet test build
 
 # Build the application
 build:
-	@echo "Building ai-news-agent-cli..."
-	go build -o ai-news-agent-cli main.go
+	@echo "Building rss-agent-cli..."
+	go build -o rss-agent-cli main.go
 
 # Run tests
 test:
@@ -42,7 +42,7 @@ lint:
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -f ai-news-agent-cli
+	rm -f rss-agent-cli
 
 # Install dependencies
 deps:
@@ -52,8 +52,8 @@ deps:
 
 # Run the application
 run: build
-	@echo "Running ai-news-agent-cli..."
-	./ai-news-agent-cli
+	@echo "Running rss-agent-cli..."
+	./rss-agent-cli
 
 # Show help
 help:

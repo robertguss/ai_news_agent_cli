@@ -2,7 +2,7 @@
 # Keep this file ≤ 25 lines. Update whenever architecture, testing, or linting changes.
 
 ## Commands
-- **Build**: `just build` or `go build -o bin/ai-news-agent-cli .`
+- **Build**: `just build` or `go build -o bin/rss-agent-cli .`
 - **Test all**: `go test ./...` | **Test verbose**: `go test -v ./...`
 - **Test single package**: `go test ./internal/database/...` (replace with specific package)
 - **Coverage**: `go test -cover ./...`

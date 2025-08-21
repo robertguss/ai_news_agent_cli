@@ -10,7 +10,7 @@ import (
         "github.com/charmbracelet/bubbles/textinput"
         tea "github.com/charmbracelet/bubbletea"
         "github.com/charmbracelet/lipgloss"
-        "github.com/robertguss/ai-news-agent-cli/internal/article"
+        "github.com/robertguss/rss-agent-cli/internal/article"
 )
 
 type ArticleItem struct {

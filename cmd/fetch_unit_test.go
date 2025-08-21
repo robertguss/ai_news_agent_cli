@@ -6,9 +6,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
-	"github.com/robertguss/ai-news-agent-cli/internal/database"
-	"github.com/robertguss/ai-news-agent-cli/internal/fetcher"
+	"github.com/robertguss/rss-agent-cli/internal/config"
+	"github.com/robertguss/rss-agent-cli/internal/database"
+	"github.com/robertguss/rss-agent-cli/internal/fetcher"
 	"github.com/stretchr/testify/assert"
 )
 

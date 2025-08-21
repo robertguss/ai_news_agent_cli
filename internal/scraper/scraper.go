@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
-	"github.com/robertguss/ai-news-agent-cli/pkg/errs"
-	"github.com/robertguss/ai-news-agent-cli/pkg/logging"
-	"github.com/robertguss/ai-news-agent-cli/pkg/retry"
+	"github.com/robertguss/rss-agent-cli/internal/config"
+	"github.com/robertguss/rss-agent-cli/pkg/errs"
+	"github.com/robertguss/rss-agent-cli/pkg/logging"
+	"github.com/robertguss/rss-agent-cli/pkg/retry"
 )
 
 var (

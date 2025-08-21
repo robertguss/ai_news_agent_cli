@@ -3,7 +3,7 @@ package scraper
 import (
 	"context"
 
-	"github.com/robertguss/ai-news-agent-cli/internal/config"
+	"github.com/robertguss/rss-agent-cli/internal/config"
 )
 
 type MockScraper struct {
