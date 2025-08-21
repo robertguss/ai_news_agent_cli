@@ -3,7 +3,7 @@ dsn: "./ai-news.db"
 ai:
   # Available models: gemini-1.5-flash, gemini-1.5-pro, gemini-2.5-flash, gemini-2.5-pro, etc.
   # For full list, see: https://ai.google.dev/gemini-api/docs/models/gemini
-  gemini_model: "gemini-1.5-flash"
+  gemini_model: "gemini-2.5-flash-lite"
 
 sources:
   - name: "Hugging Face Blog"

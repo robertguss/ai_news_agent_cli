@@ -351,12 +351,19 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                         var contentType sql.NullString
                         var storyGroupID sql.NullString
                         var analysisStatus = "unprocessed"
+                        var articleContent sql.NullString
 
                         if deps.Scraper != nil && deps.AI != nil {
                                 content, scrapeErr := deps.Scraper.Scrape(article.Link)
                                 if scrapeErr != nil {
                                         analysisStatus = "pending"
                                 } else {
+                                        // Store the scraped content
+                                        articleContent = sql.NullString{
+                                                String: content,
+                                                Valid:  true,
+                                        }
+
                                         progress <- tui.DetailedProgressMsg{
                                                 Source:       source.Name,
                                                 Phase:        tui.PhaseAI,
@@ -418,6 +425,7 @@ func FetchAndStoreWithAIProgress(ctx context.Context, deps PipelineDeps, source 
                                         Valid:  true,
                                 },
                                 StoryGroupID: storyGroupID,
+                                Content:      articleContent,
                         }
 
                         _, err = deps.Queries.CreateArticle(ctx, params)
